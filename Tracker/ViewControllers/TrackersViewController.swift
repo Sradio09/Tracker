@@ -62,7 +62,6 @@ final class TrackersViewController: UIViewController {
         l.translatesAutoresizingMaskIntoConstraints = false
         l.setContentHuggingPriority(.required, for: .horizontal)
         l.setContentCompressionResistancePriority(.required, for: .horizontal)
-        
         return l
     }()
     
@@ -97,7 +96,7 @@ final class TrackersViewController: UIViewController {
     
     // MARK: - ViewModel
     
-    private let viewModel = TrackersViewModel()
+    private lazy var viewModel = TrackersViewModel(delegate: self)
     
     // MARK: - Formatters
     
@@ -118,8 +117,6 @@ final class TrackersViewController: UIViewController {
         setupSearch()
         setupKeyboardDismiss()
         
-        
-        viewModel.loadTestData()
         applySelectedDate(Date())
     }
     
@@ -232,7 +229,6 @@ final class TrackersViewController: UIViewController {
     private func applySelectedDate(_ date: Date) {
         selectedDate = date
         datePicker.date = date
-        
         dateLabel.text = dateFormatter.string(from: date)
         
         viewModel.filterBy(date: date)
@@ -254,7 +250,6 @@ final class TrackersViewController: UIViewController {
         let isEmpty = viewModel.filteredTrackers.isEmpty
         collectionView.isHidden = isEmpty
         emptyStateView.isHidden = !isEmpty
-        
         collectionView.reloadData()
     }
     
@@ -262,6 +257,7 @@ final class TrackersViewController: UIViewController {
         let cal = Calendar.current
         return cal.startOfDay(for: date) > cal.startOfDay(for: Date())
     }
+    
     // MARK: - Keyboard
     
     private func setupKeyboardDismiss() {
@@ -273,7 +269,16 @@ final class TrackersViewController: UIViewController {
     @objc private func endEditing() {
         view.endEditing(true)
     }
-    
+}
+
+// MARK: - StoreUpdateDelegate (получаем обновления от FRC)
+
+extension TrackersViewController: StoreUpdateDelegate {
+    func didUpdate(_ update: StoreUpdate) {
+        viewModel.reloadFromStores()
+        viewModel.filterBy(date: selectedDate)
+        reloadData()
+    }
 }
 
 // MARK: - UICollectionViewDataSource
@@ -381,6 +386,5 @@ extension TrackersViewController {
         s.translatesAutoresizingMaskIntoConstraints = false
         return s
     }
-    
 }
 
