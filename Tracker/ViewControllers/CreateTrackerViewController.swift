@@ -28,7 +28,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         case color(UIColor)
     }
 
-    // MARK: - UI (declared in +UI)
+    // MARK: - UI
 
     let titleLabel: UILabel = {
         let l = UILabel()
@@ -139,7 +139,6 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         cv.backgroundColor = .clear
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.delegate = self
-
         cv.allowsMultipleSelection = true
         cv.isScrollEnabled = false
 
@@ -150,6 +149,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
             forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
             withReuseIdentifier: SectionHeaderView.reuseId
         )
+
         return cv
     }()
 
@@ -177,7 +177,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return s
     }()
 
-    // MARK: - Collection state (declared in +Collection)
+    // MARK: - Collection state
 
     var selectionCollectionHeightConstraint: NSLayoutConstraint?
     var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
