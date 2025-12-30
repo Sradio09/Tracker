@@ -3,14 +3,14 @@ import CoreData
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
-
+    
     var window: UIWindow?
-
-    // MARK: - Core Data Stack (упрощённый современный подход)
-
+    
+    // MARK: - Core Data Stack
+    
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "TrackerModel")
-
+        
         container.loadPersistentStores { _, error in
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
@@ -19,14 +19,14 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         container.viewContext.automaticallyMergesChangesFromParent = true
-
+        
         return container
     }()
-
+    
     func saveContext() {
         let context = persistentContainer.viewContext
         guard context.hasChanges else { return }
-
+        
         do {
             try context.save()
         } catch {
@@ -34,23 +34,23 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
             fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
         }
     }
-
+    
     // MARK: - App lifecycle
-
+    
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-
+        
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = TabBarController()
         window?.makeKeyAndVisible()
-
+        
         return true
     }
-
+    
     // MARK: UISceneSession Lifecycle
-
+    
     func application(
         _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
@@ -58,7 +58,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     ) -> UISceneConfiguration {
         UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
-
+    
     func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) { }
 }
 

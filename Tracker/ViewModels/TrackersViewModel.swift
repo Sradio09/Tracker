@@ -3,16 +3,31 @@ import UIKit
 
 final class TrackersViewModel {
     
-    // MARK: - Stored data
+    enum SectionModel {
+        case categorized(title: String, trackers: [Tracker])
+        case uncategorized(trackers: [Tracker])
+        
+        var trackers: [Tracker] {
+            switch self {
+            case .categorized(_, let trackers): return trackers
+            case .uncategorized(let trackers): return trackers
+            }
+        }
+        
+        var title: String? {
+            switch self {
+            case .categorized(let title, _): return title
+            case .uncategorized: return nil
+            }
+        }
+    }
     
     private(set) var categories: [TrackerCategory] = []
     private(set) var completedTrackers: [TrackerRecord] = []
-    private(set) var filteredTrackers: [Tracker] = []
+    private(set) var sections: [SectionModel] = []
     
     private(set) var currentDate: Date = Date()
     private var currentSearchText: String = ""
-    
-    // MARK: - Stores
     
     private let trackerStore: TrackerStore
     private let categoryStore: TrackerCategoryStore
@@ -27,19 +42,15 @@ final class TrackersViewModel {
         filterBy(date: Date())
     }
     
-    // MARK: - Reload
-    
     func reloadFromStores() {
         categories = buildCategoriesFromCoreData()
         completedTrackers = recordStore.fetchAllRecords()
         applyFilter()
     }
     
-    // MARK: - Create tracker
-    
-    func addTracker(_ tracker: Tracker, to categoryTitle: String) {
+    func addTracker(_ tracker: Tracker, categoryTitle: String?) {
         do {
-            let category = try findOrCreateCategoryCoreData(with: categoryTitle)
+            let category = try categoryCoreDataIfNeeded(with: categoryTitle)
             
             try trackerStore.addNewTracker(
                 id: tracker.id,
@@ -53,11 +64,17 @@ final class TrackersViewModel {
         } catch {
             assertionFailure("Не удалось сохранить трекер: \(error)")
         }
-        
         reloadFromStores()
     }
     
-    // MARK: - Completion (records)
+    func deleteTracker(_ id: UUID) {
+        do {
+            try trackerStore.deleteTracker(with: id)
+        } catch {
+            assertionFailure("Не удалось удалить трекер: \(error)")
+        }
+        reloadFromStores()
+    }
     
     func completeTracker(_ trackerId: UUID, on date: Date) {
         guard !isTrackerCompleted(trackerId, on: date) else { return }
@@ -91,53 +108,78 @@ final class TrackersViewModel {
         completedTrackers.filter { $0.trackerId == trackerId }.count
     }
     
-    // MARK: - Filtering
-    
     func filterBy(date: Date) {
         currentDate = date
         applyFilter()
     }
     
     func filterBy(search text: String) {
-        currentSearchText = text.lowercased()
+        currentSearchText = text
         applyFilter()
     }
     
     private func applyFilter() {
         let weekday = currentDate.weekday
+        let search = currentSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         
-        let allTrackers = categories.flatMap { $0.trackers }
+        var resultSections: [SectionModel] = categories.compactMap { category in
+            let filtered = category.trackers.filter { tracker in
+                let matchesDay = tracker.schedule.isEmpty || tracker.schedule.contains(weekday)
+                let matchesSearch = search.isEmpty || tracker.name.lowercased().contains(search)
+                return matchesDay && matchesSearch
+            }
+            guard !filtered.isEmpty else { return nil }
+            return .categorized(title: category.title, trackers: filtered)
+        }
         
-        filteredTrackers = allTrackers.filter { tracker in
+        let uncategorized = fetchUncategorizedTrackers().filter { tracker in
             let matchesDay = tracker.schedule.isEmpty || tracker.schedule.contains(weekday)
-            
-            let matchesSearch = currentSearchText.isEmpty ||
-            tracker.name.lowercased().contains(currentSearchText)
-            
+            let matchesSearch = search.isEmpty || tracker.name.lowercased().contains(search)
             return matchesDay && matchesSearch
         }
+        
+        if !uncategorized.isEmpty {
+            resultSections.append(.uncategorized(trackers: uncategorized))
+        }
+        
+        sections = resultSections
     }
     
-    // MARK: - CoreData -> Domain mapping (через Store, без CoreData импортов в UI)
+    // MARK: - Data for VC
+    
+    func numberOfSections() -> Int { sections.count }
+    func numberOfItems(in section: Int) -> Int { sections[section].trackers.count }
+    func sectionTitle(_ section: Int) -> String? { sections[section].title }
+    
+    func tracker(at indexPath: IndexPath) -> Tracker {
+        sections[indexPath.section].trackers[indexPath.item]
+    }
+    
+    func isUncategorizedSection(_ section: Int) -> Bool {
+        if case .uncategorized = sections[section] { return true }
+        return false
+    }
+    
+    // MARK: - CoreData -> Domain mapping
     
     private func buildCategoriesFromCoreData() -> [TrackerCategory] {
         var result: [TrackerCategory] = []
         
-        let sections = categoryStore.numberOfSections
-        
-        for section in 0..<sections {
-            let rows = categoryStore.numberOfRowsInSection(section)
-            
-            for row in 0..<rows {
+        let sectionsCount = categoryStore.numberOfSections()
+        for section in 0..<sectionsCount {
+            let rowsCount = categoryStore.numberOfRowsInSection(section)
+            for row in 0..<rowsCount {
                 let categoryCD = categoryStore.object(at: IndexPath(row: row, section: section))
-                let title = categoryCD.title ?? "Без категории"
+                
+                guard let titleRaw = categoryCD.title?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !titleRaw.isEmpty else { continue }
                 
                 let trackersSet = (categoryCD.value(forKey: "trackers") as? Set<TrackerCoreData>) ?? []
                 let trackers = trackersSet
                     .compactMap(Self.mapTrackerCoreDataToDomain)
                     .sorted { $0.name.lowercased() < $1.name.lowercased() }
                 
-                result.append(TrackerCategory(title: title, trackers: trackers))
+                result.append(TrackerCategory(title: titleRaw, trackers: trackers))
             }
         }
         
@@ -145,32 +187,54 @@ final class TrackersViewModel {
         return result
     }
     
-    private func findOrCreateCategoryCoreData(with title: String) throws -> TrackerCategoryCoreData {
-        let sections = categoryStore.numberOfSections
-        for section in 0..<sections {
-            let rows = categoryStore.numberOfRowsInSection(section)
+    private func fetchUncategorizedTrackers() -> [Tracker] {
+        var trackers: [Tracker] = []
+        
+        let secCount = trackerStore.numberOfSections
+        for section in 0..<secCount {
+            let rows = trackerStore.numberOfRowsInSection(section)
             for row in 0..<rows {
-                let obj = categoryStore.object(at: IndexPath(row: row, section: section))
-                if (obj.title ?? "") == title {
-                    return obj
+                let obj = trackerStore.object(at: IndexPath(row: row, section: section))
+                if obj.category == nil {
+                    if let mapped = Self.mapTrackerCoreDataToDomain(obj) {
+                        trackers.append(mapped)
+                    }
                 }
+            }
+        }
+        
+        return trackers.sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+    
+    private func categoryCoreDataIfNeeded(with title: String?) throws -> TrackerCategoryCoreData? {
+        guard let title = title?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !title.isEmpty else { return nil }
+        
+        let sectionsCount = categoryStore.numberOfSections()
+        for section in 0..<sectionsCount {
+            let rowsCount = categoryStore.numberOfRowsInSection(section)
+            for row in 0..<rowsCount {
+                let obj = categoryStore.object(at: IndexPath(row: row, section: section))
+                if (obj.title ?? "") == title { return obj }
             }
         }
         
         try categoryStore.addCategory(title: title)
         
-        let sections2 = categoryStore.numberOfSections
-        for section in 0..<sections2 {
-            let rows = categoryStore.numberOfRowsInSection(section)
-            for row in 0..<rows {
+        let sectionsCount2 = categoryStore.numberOfSections()
+        for section in 0..<sectionsCount2 {
+            let rowsCount = categoryStore.numberOfRowsInSection(section)
+            for row in 0..<rowsCount {
                 let obj = categoryStore.object(at: IndexPath(row: row, section: section))
-                if (obj.title ?? "") == title {
-                    return obj
-                }
+                if (obj.title ?? "") == title { return obj }
             }
         }
         
-        throw NSError(domain: "TrackerCategoryStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "Не удалось создать категорию"])
+        throw NSError(
+            domain: "TrackerCategoryStore",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Не удалось создать категорию"]
+        )
     }
     
     // MARK: - Helpers
@@ -194,16 +258,12 @@ final class TrackersViewModel {
     
     private static func scheduleMask(from days: [WeekDay]) -> Int16 {
         var mask: Int16 = 0
-        for day in Set(days) {
-            mask |= Int16(1 << bitIndex(for: day))
-        }
+        for day in Set(days) { mask |= Int16(1 << bitIndex(for: day)) }
         return mask
     }
     
     private static func days(from mask: Int16) -> [WeekDay] {
-        WeekDay.allCases.filter { day in
-            (mask & Int16(1 << bitIndex(for: day))) != 0
-        }
+        WeekDay.allCases.filter { day in (mask & Int16(1 << bitIndex(for: day))) != 0 }
     }
     
     private static func bitIndex(for day: WeekDay) -> Int {
@@ -219,11 +279,7 @@ final class TrackersViewModel {
     }
     
     private static func hexString(from color: UIColor) -> String {
-        var r: CGFloat = 0
-        var g: CGFloat = 0
-        var b: CGFloat = 0
-        var a: CGFloat = 0
-        
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         color.getRed(&r, green: &g, blue: &b, alpha: &a)
         
         let ri = Int(round(r * 255))
@@ -242,7 +298,7 @@ final class TrackersViewModel {
         
         let rStr = String(s.prefix(2))
         let gStr = String(s.dropFirst(2).prefix(2))
-        let bStr = String(s.dropFirst(4).prefix(2))
+        let bStr = String(s.dropFirst(4))
         
         let r = CGFloat(Int(rStr, radix: 16) ?? 0) / 255.0
         let g = CGFloat(Int(gStr, radix: 16) ?? 0) / 255.0
