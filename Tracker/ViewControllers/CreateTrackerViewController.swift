@@ -2,14 +2,35 @@ import UIKit
 
 final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
 
-    private enum Constants {
+    // MARK: - Constants
+
+    enum Constants {
         static let maxNameLength = 38
         static let warningText = "Ограничение 38 символов"
     }
 
+    // MARK: - Collection models
+
+    enum Section: Int, CaseIterable {
+        case emoji
+        case color
+
+        var title: String {
+            switch self {
+            case .emoji: return "Emoji"
+            case .color: return "Цвет"
+            }
+        }
+    }
+
+    enum Item: Hashable {
+        case emoji(String)
+        case color(UIColor)
+    }
+
     // MARK: - UI
 
-    private let titleLabel: UILabel = {
+    let titleLabel: UILabel = {
         let l = UILabel()
         l.text = "Новая привычка"
         l.font = .systemFont(ofSize: 16, weight: .medium)
@@ -18,15 +39,10 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return l
     }()
 
-    private lazy var nameField: UITextField = {
+    lazy var nameField: UITextField = {
         let tf = UITextField()
         tf.placeholder = "Введите название трекера"
-        tf.backgroundColor = UIColor(
-            red: 230/255,
-            green: 232/255,
-            blue: 235/255,
-            alpha: 0.30
-        )
+        tf.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.30)
         tf.layer.cornerRadius = 16
         tf.setLeftPaddingPoints(16)
         tf.font = .systemFont(ofSize: 17, weight: .regular)
@@ -40,7 +56,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return tf
     }()
 
-    private let warningLabel: UILabel = {
+    let warningLabel: UILabel = {
         let label = UILabel()
         label.text = Constants.warningText
         label.textColor = .systemRed
@@ -52,23 +68,18 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return label
     }()
 
-    private lazy var categoryButton: UIButton = Self.makeRowButton(title: "Категория", subtitle: nil)
-    private lazy var scheduleButton: UIButton = Self.makeRowButton(title: "Расписание", subtitle: nil)
+    lazy var categoryButton: UIButton = Self.makeRowButton(title: "Категория", subtitle: nil)
+    lazy var scheduleButton: UIButton = Self.makeRowButton(title: "Расписание", subtitle: nil)
 
-    private let separator: UIView = {
+    let separator: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor(
-            red: 174/255,
-            green: 175/255,
-            blue: 180/255,
-            alpha: 1
-            )
+        v.backgroundColor = UIColor(red: 174/255, green: 175/255, blue: 180/255, alpha: 1)
         v.translatesAutoresizingMaskIntoConstraints = false
         v.heightAnchor.constraint(equalToConstant: 1).isActive = true
         return v
     }()
 
-    private lazy var cancelButton: UIButton = {
+    lazy var cancelButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Отменить"
         config.baseForegroundColor = .systemRed
@@ -86,7 +97,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return b
     }()
 
-    private lazy var createButton: UIButton = {
+    lazy var createButton: UIButton = {
         var config = UIButton.Configuration.filled()
         config.title = "Создать"
         config.baseForegroundColor = .white
@@ -100,7 +111,116 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return b
     }()
 
+    let scrollView: UIScrollView = {
+        let sv = UIScrollView()
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        sv.alwaysBounceVertical = true
+        sv.keyboardDismissMode = .interactive
+        return sv
+    }()
+
+    let contentView: UIView = {
+        let v = UIView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
+    lazy var listCard: UIView = {
+        let v = UIView()
+        v.backgroundColor = UIColor(red: 247/255, green: 248/255, blue: 249/255, alpha: 1)
+        v.layer.cornerRadius = 16
+        v.clipsToBounds = true
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
+    lazy var selectionCollectionView: UICollectionView = {
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: makeCollectionLayout())
+        cv.backgroundColor = .clear
+        cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.delegate = self
+        cv.allowsMultipleSelection = true
+        cv.isScrollEnabled = false
+
+        cv.register(EmojiCell.self, forCellWithReuseIdentifier: EmojiCell.reuseId)
+        cv.register(ColorCell.self, forCellWithReuseIdentifier: ColorCell.reuseId)
+        cv.register(
+            SectionHeaderView.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: SectionHeaderView.reuseId
+        )
+
+        return cv
+    }()
+
+    lazy var topStack: UIStackView = {
+        let s = UIStackView(arrangedSubviews: [
+            nameField,
+            warningLabel,
+            listCard,
+            selectionCollectionView
+        ])
+        s.axis = .vertical
+        s.translatesAutoresizingMaskIntoConstraints = false
+        s.spacing = 8
+        s.setCustomSpacing(24, after: nameField)
+        s.setCustomSpacing(24, after: listCard)
+        return s
+    }()
+
+    lazy var bottomStack: UIStackView = {
+        let s = UIStackView(arrangedSubviews: [cancelButton, createButton])
+        s.axis = .horizontal
+        s.spacing = 16
+        s.distribution = .fillEqually
+        s.translatesAutoresizingMaskIntoConstraints = false
+        return s
+    }()
+
+    // MARK: - Collection state
+
+    var selectionCollectionHeightConstraint: NSLayoutConstraint?
+    var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
+
+    var selectedEmojiIndexPath: IndexPath?
+    var selectedColorIndexPath: IndexPath?
+    var selectedEmoji: String?
+    var selectedColor: UIColor?
+
+    // MARK: - Data
+
+    let emojis: [String] = [
+        "🙂","😻","🌺","🐶","❤️","😱",
+        "😇","😡","🥶","🤔","🙌","🍔",
+        "🥦","🏓","🥇","🎸","🏝️","😪"
+    ]
+
+    let colors: [UIColor] = [
+        UIColor(red: 1, green: 0.23, blue: 0.19, alpha: 1),
+        UIColor(red: 1, green: 0.58, blue: 0.0, alpha: 1),
+        UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1),
+        UIColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1),
+        UIColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1),
+        UIColor(red: 1.0, green: 0.35, blue: 0.8, alpha: 1),
+
+        UIColor(red: 1.0, green: 0.8, blue: 0.8, alpha: 1),
+        UIColor(red: 0.35, green: 0.68, blue: 1.0, alpha: 1),
+        UIColor(red: 0.2, green: 0.9, blue: 0.7, alpha: 1),
+        UIColor(red: 0.2, green: 0.2, blue: 0.4, alpha: 1),
+        UIColor(red: 1.0, green: 0.35, blue: 0.3, alpha: 1),
+        UIColor(red: 1.0, green: 0.6, blue: 0.85, alpha: 1),
+
+        UIColor(red: 1.0, green: 0.78, blue: 0.55, alpha: 1),
+        UIColor(red: 0.45, green: 0.52, blue: 1.0, alpha: 1),
+        UIColor(red: 0.35, green: 0.2, blue: 0.95, alpha: 1),
+        UIColor(red: 0.65, green: 0.35, blue: 0.95, alpha: 1),
+        UIColor(red: 0.55, green: 0.45, blue: 0.95, alpha: 1),
+        UIColor(red: 0.2, green: 0.85, blue: 0.35, alpha: 1)
+    ]
+
     // MARK: - Stored
+
+    var onCreate: ((Tracker) -> Void)?
 
     private var selectedSchedule: [WeekDay] = [] {
         didSet {
@@ -113,8 +233,6 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         didSet { validate() }
     }
 
-    var onCreate: ((Tracker) -> Void)?
-
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -124,110 +242,48 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         setupUI()
         setupActions()
 
+        setupCollectionDataSource()
+        applyCollectionSnapshot()
+
         updateScheduleSubtitle()
         validate()
     }
 
-    // MARK: - UI
-
-    private func setupUI() {
-        // Заголовок
-        view.addSubview(titleLabel)
-
-        // Карточка с кнопками
-        let listCard = UIView()
-        listCard.backgroundColor = UIColor(
-            red: 247/255,
-            green: 248/255,
-            blue: 249/255, alpha: 1
-        )
-        listCard.layer.cornerRadius = 16
-        listCard.clipsToBounds = true
-        listCard.translatesAutoresizingMaskIntoConstraints = false
-
-        listCard.addSubview(categoryButton)
-        listCard.addSubview(separator)
-        listCard.addSubview(scheduleButton)
-
-
-        NSLayoutConstraint.activate([
-            categoryButton.topAnchor.constraint(equalTo: listCard.topAnchor),
-            categoryButton.leadingAnchor.constraint(equalTo: listCard.leadingAnchor),
-            categoryButton.trailingAnchor.constraint(equalTo: listCard.trailingAnchor),
-            categoryButton.heightAnchor.constraint(equalToConstant: 75),
-
-            separator.topAnchor.constraint(equalTo: categoryButton.bottomAnchor),
-            separator.leadingAnchor.constraint(equalTo: listCard.leadingAnchor, constant: 16),
-            separator.trailingAnchor.constraint(equalTo: listCard.trailingAnchor, constant: -16),
-
-            scheduleButton.topAnchor.constraint(equalTo: separator.bottomAnchor),
-            scheduleButton.leadingAnchor.constraint(equalTo: listCard.leadingAnchor),
-            scheduleButton.trailingAnchor.constraint(equalTo: listCard.trailingAnchor),
-            scheduleButton.heightAnchor.constraint(equalToConstant: 75),
-            scheduleButton.bottomAnchor.constraint(equalTo: listCard.bottomAnchor)
-        ])
-
-
-        let topStack = UIStackView(arrangedSubviews: [
-            nameField,
-            warningLabel,
-            listCard
-        ])
-        topStack.axis = .vertical
-        topStack.translatesAutoresizingMaskIntoConstraints = false
-        topStack.spacing = 8
-        topStack.setCustomSpacing(24, after: nameField)
-
-        let bottomStack = UIStackView(arrangedSubviews: [cancelButton, createButton])
-        bottomStack.axis = .horizontal
-        bottomStack.spacing = 16
-        bottomStack.distribution = .fillEqually
-        bottomStack.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(topStack)
-        view.addSubview(bottomStack)
-
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 27),
-                titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-
-            topStack.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 38),
-            topStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            topStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-
-            bottomStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            bottomStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            bottomStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24)
-        ])
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateSelectionCollectionHeight()
     }
 
-    private func setupActions() {
-        cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
-        createButton.addTarget(self, action: #selector(createTapped), for: .touchUpInside)
-        scheduleButton.addTarget(self, action: #selector(openSchedule), for: .touchUpInside)
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        DispatchQueue.main.async { [weak self] in
+            self?.updateSelectionCollectionHeight()
+        }
     }
 
     // MARK: - Actions
 
-    @objc private func cancelTapped() {
+    @objc func cancelTapped() {
         dismiss(animated: true)
     }
 
-    @objc private func createTapped() {
+    @objc func createTapped() {
         view.endEditing(true)
+
+        let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         let tracker = Tracker(
             id: UUID(),
-            name: nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
-            color: .systemBlue,
-            emoji: "🙂",
+            name: name,
+            color: selectedColor ?? .systemBlue,
+            emoji: selectedEmoji ?? "🙂",
             schedule: selectedSchedule
         )
         onCreate?(tracker)
         dismiss(animated: true)
     }
 
-    @objc private func openSchedule() {
+    @objc func openSchedule() {
         let vc = ScheduleViewController()
         vc.selectedDays = selectedSchedule
         vc.onSelect = { [weak self] days in
@@ -236,22 +292,28 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         navigationController?.pushViewController(vc, animated: true)
     }
 
-    @objc private func nameChanged() {
+    @objc func nameChanged() {
+        validate()
+    }
+
+    @objc func doneTapped() {
+        nameField.resignFirstResponder()
         validate()
     }
 
     // MARK: - Validation
 
-    private func validate() {
+    func validate() {
         let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let isValid = !name.isEmpty && name.count <= Constants.maxNameLength
+        let isValidName = !name.isEmpty && name.count <= Constants.maxNameLength
 
         warningLabel.isHidden = name.count <= Constants.maxNameLength
+
         createButton.isEnabled = true
-        createButton.isUserInteractionEnabled = isValid
+        createButton.isUserInteractionEnabled = isValidName
 
         var config = createButton.configuration
-        config?.background.backgroundColor = isValid ? .black : .systemGray3
+        config?.background.backgroundColor = isValidName ? .black : .systemGray3
         config?.baseForegroundColor = .white
         createButton.configuration = config
     }
@@ -277,33 +339,15 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return true
     }
 
-    // MARK: - Keyboard toolbar
-
-    private func makeKeyboardToolbar() -> UIToolbar {
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-
-        let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let done = UIBarButtonItem(title: "Готово", style: .done, target: self, action: #selector(doneTapped))
-
-        toolbar.items = [flex, done]
-        return toolbar
-    }
-
-    @objc private func doneTapped() {
-        nameField.resignFirstResponder()
-        validate()
-    }
-
     // MARK: - Schedule subtitle
 
-    private func updateScheduleSubtitle() {
+    func updateScheduleSubtitle() {
         var config = scheduleButton.configuration
         config?.subtitle = scheduleSummaryText(for: selectedSchedule)
         scheduleButton.configuration = config
     }
 
-    private func scheduleSummaryText(for days: [WeekDay]) -> String? {
+    func scheduleSummaryText(for days: [WeekDay]) -> String? {
         let set = Set(days)
         if set.isEmpty { return nil }
 
@@ -318,47 +362,5 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         let ordered = WeekDay.allCases.filter { set.contains($0) }
         return ordered.map { $0.rawValue }.joined(separator: ", ")
     }
-
-    // MARK: - Factory
-
-    private static func makeRowButton(title: String, subtitle: String? = nil) -> UIButton {
-        var config = UIButton.Configuration.plain()
-
-        config.title = title
-        config.subtitle = subtitle
-        config.titleAlignment = .leading
-
-        config.baseForegroundColor = .black
-        config.background.backgroundColor = .clear
-
-        config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
-
-        config.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var out = incoming
-            out.foregroundColor = UIColor.systemGray
-            out.font = UIFont.systemFont(ofSize: 17, weight: .regular)
-            return out
-        }
-
-        config.image = UIImage(systemName: "chevron.right")
-        config.imagePlacement = .trailing
-        config.imagePadding = 8
-        config.imageColorTransformer = UIConfigurationColorTransformer { _ in
-            UIColor(
-                red: 174/255,
-                green: 175/255,
-                blue: 180/255,
-                alpha: 1
-            )
-        }
-        config.preferredSymbolConfigurationForImage =
-            UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
-
-        let button = UIButton(configuration: config)
-        button.contentHorizontalAlignment = .fill
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.layer.cornerRadius = 16
-        button.clipsToBounds = true
-        return button
-    }
 }
+
