@@ -2,43 +2,40 @@ import UIKit
 import CoreData
 
 final class TrackerStore: NSObject {
-
+    
     weak var delegate: StoreUpdateDelegate?
-
+    
     private let context: NSManagedObjectContext
-
+    
     private var insertedIndexes: IndexSet?
     private var deletedIndexes: IndexSet?
-
+    
     init(context: NSManagedObjectContext, delegate: StoreUpdateDelegate?) {
         self.context = context
         self.delegate = delegate
         super.init()
+        _ = fetchedResultsController
     }
-
+    
     convenience init(delegate: StoreUpdateDelegate?) {
         self.init(context: Self.makeViewContext(), delegate: delegate)
     }
-
+    
     private static func makeViewContext() -> NSManagedObjectContext {
-        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
-            assertionFailure("AppDelegate is not available")
-            return NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
-        }
-        return appDelegate.persistentContainer.viewContext
+        DataBaseStore.shared.viewContext
     }
-
+    
     private lazy var fetchedResultsController: NSFetchedResultsController<TrackerCoreData> = {
         let fetchRequest = TrackerCoreData.fetchRequest()
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-
+        
         let frc = NSFetchedResultsController(
             fetchRequest: fetchRequest,
             managedObjectContext: context,
             sectionNameKeyPath: nil,
             cacheName: nil
         )
-
+        
         frc.delegate = self
         do {
             try frc.performFetch()
@@ -47,17 +44,17 @@ final class TrackerStore: NSObject {
         }
         return frc
     }()
-
+    
     var numberOfSections: Int { fetchedResultsController.sections?.count ?? 0 }
-
+    
     func numberOfRowsInSection(_ section: Int) -> Int {
         fetchedResultsController.sections?[section].numberOfObjects ?? 0
     }
-
+    
     func object(at indexPath: IndexPath) -> TrackerCoreData {
         fetchedResultsController.object(at: indexPath)
     }
-
+    
     func addNewTracker(
         id: UUID,
         name: String,
@@ -65,7 +62,7 @@ final class TrackerStore: NSObject {
         colorHex: String,
         schedule: Int16,
         isPinned: Bool,
-        category: TrackerCategoryCoreData
+        category: TrackerCategoryCoreData?
     ) throws {
         let tracker = TrackerCoreData(context: context)
         tracker.id = id
@@ -77,21 +74,36 @@ final class TrackerStore: NSObject {
         tracker.category = category
         try context.save()
     }
-
+    
     func deleteTracker(at indexPath: IndexPath) throws {
         let tracker = fetchedResultsController.object(at: indexPath)
         context.delete(tracker)
         try context.save()
     }
+    
+    func deleteTracker(with id: UUID) throws {
+        let secCount = numberOfSections
+        for section in 0..<secCount {
+            let rows = numberOfRowsInSection(section)
+            for row in 0..<rows {
+                let obj = object(at: IndexPath(row: row, section: section))
+                if obj.id == id {
+                    context.delete(obj)
+                    try context.save()
+                    return
+                }
+            }
+        }
+    }
 }
 
 extension TrackerStore: NSFetchedResultsControllerDelegate {
-
+    
     func controllerWillChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
         insertedIndexes = IndexSet()
         deletedIndexes = IndexSet()
     }
-
+    
     func controller(
         _ controller: NSFetchedResultsController<NSFetchRequestResult>,
         didChange anObject: Any,
@@ -108,7 +120,7 @@ extension TrackerStore: NSFetchedResultsControllerDelegate {
             break
         }
     }
-
+    
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
         delegate?.didUpdate(StoreUpdate(
             insertedIndexes: insertedIndexes ?? [],

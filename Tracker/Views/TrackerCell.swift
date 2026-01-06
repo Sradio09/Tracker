@@ -23,6 +23,8 @@ final class TrackerCell: UICollectionViewCell {
         return v
     }()
     
+    var cardViewForContextMenu: UIView { cardView }
+    
     private let emojiContainer: UIView = {
         let v = UIView()
         v.backgroundColor = UIColor.white.withAlphaComponent(0.3)
@@ -186,4 +188,3 @@ final class TrackerCell: UICollectionViewCell {
         return "дней"
     }
 }
-

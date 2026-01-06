@@ -19,7 +19,7 @@ enum WeekDay: String, CaseIterable {
         }
     }
     
-    // MARK: - CoreData schedule (Int16 bitmask)
+    // MARK: - CoreData schedule
     
     private var bitIndex: Int {
         switch self {

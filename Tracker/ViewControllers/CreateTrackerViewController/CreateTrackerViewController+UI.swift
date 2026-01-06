@@ -68,6 +68,7 @@ extension CreateTrackerViewController {
         cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
         createButton.addTarget(self, action: #selector(createTapped), for: .touchUpInside)
         scheduleButton.addTarget(self, action: #selector(openSchedule), for: .touchUpInside)
+        categoryButton.addTarget(self, action: #selector(openCategory), for: .touchUpInside)
     }
     
     func makeKeyboardToolbar() -> UIToolbar {
@@ -81,6 +82,28 @@ extension CreateTrackerViewController {
         return toolbar
     }
     
+    func updateScheduleSubtitle() {
+        var config = scheduleButton.configuration
+        config?.subtitle = scheduleSummaryText(for: selectedSchedule)
+        scheduleButton.configuration = config
+    }
+    
+    func scheduleSummaryText(for days: [WeekDay]) -> String? {
+        let set = Set(days)
+        if set.isEmpty { return nil }
+        
+        let weekdays: Set<WeekDay> = [.monday, .tuesday, .wednesday, .thursday, .friday]
+        let weekends: Set<WeekDay> = [.saturday, .sunday]
+        let allDays = Set(WeekDay.allCases)
+        
+        if set == allDays { return "Каждый день" }
+        if set == weekdays { return "Будние" }
+        if set == weekends { return "Выходные" }
+        
+        let ordered = WeekDay.allCases.filter { set.contains($0) }
+        return ordered.map { $0.rawValue }.joined(separator: ", ")
+    }
+    
     static func makeRowButton(title: String, subtitle: String? = nil) -> UIButton {
         var config = UIButton.Configuration.plain()
         
@@ -90,7 +113,6 @@ extension CreateTrackerViewController {
         
         config.baseForegroundColor = .black
         config.background.backgroundColor = .clear
-        
         config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
         
         config.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in

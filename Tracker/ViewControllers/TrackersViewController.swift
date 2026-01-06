@@ -2,8 +2,6 @@ import UIKit
 
 final class TrackersViewController: UIViewController {
     
-    // MARK: - State
-    
     private var selectedDate: Date = Date()
     
     // MARK: - UI
@@ -36,13 +34,7 @@ final class TrackersViewController: UIViewController {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
         
-        v.backgroundColor = UIColor(
-            red: 240/255,
-            green: 240/255,
-            blue: 240/255,
-            alpha: 1
-        )
-        
+        v.backgroundColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
         v.layer.cornerRadius = 12
         v.clipsToBounds = true
         
@@ -84,13 +76,22 @@ final class TrackersViewController: UIViewController {
         layout.minimumLineSpacing = 16
         layout.minimumInteritemSpacing = 9
         layout.sectionInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        layout.headerReferenceSize = CGSize(width: 0, height: 32)
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .white
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.dataSource = self
         cv.delegate = self
+        
         cv.register(TrackerCell.self, forCellWithReuseIdentifier: TrackerCell.identifier)
+        
+        cv.register(
+            SectionHeaderView.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: SectionHeaderView.reuseId
+        )
+        
         return cv
     }()
     
@@ -169,6 +170,7 @@ final class TrackersViewController: UIViewController {
         view.addSubview(searchField)
         view.addSubview(collectionView)
         view.addSubview(emptyStateView)
+        
         emptyStateView.addSubview(emptyImageView)
         emptyStateView.addSubview(emptyLabel)
         
@@ -181,7 +183,7 @@ final class TrackersViewController: UIViewController {
             searchField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             searchField.heightAnchor.constraint(equalToConstant: 36),
             
-            collectionView.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: 8),
+            collectionView.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: 34),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -206,9 +208,9 @@ final class TrackersViewController: UIViewController {
     @objc private func addTracker() {
         let vc = CreateTrackerViewController()
         
-        vc.onCreate = { [weak self] tracker in
+        vc.onCreate = { [weak self] tracker, categoryTitle in
             guard let self else { return }
-            self.viewModel.addTracker(tracker, to: "Без категории")
+            self.viewModel.addTracker(tracker, categoryTitle: categoryTitle)
             self.viewModel.filterBy(date: self.selectedDate)
             self.reloadData()
         }
@@ -247,7 +249,7 @@ final class TrackersViewController: UIViewController {
     }
     
     private func reloadData() {
-        let isEmpty = viewModel.filteredTrackers.isEmpty
+        let isEmpty = viewModel.numberOfSections() == 0
         collectionView.isHidden = isEmpty
         emptyStateView.isHidden = !isEmpty
         collectionView.reloadData()
@@ -269,9 +271,55 @@ final class TrackersViewController: UIViewController {
     @objc private func endEditing() {
         view.endEditing(true)
     }
+    
+    // MARK: - Delete alert
+    
+    private func presentDeleteAlert(trackerId: UUID) {
+        let alert = UIAlertController(
+            title: nil,
+            message: "Уверены что хотите удалить трекер?",
+            preferredStyle: .actionSheet
+        )
+        
+        let delete = UIAlertAction(title: "Удалить", style: .destructive) { [weak self] _ in
+            guard let self else { return }
+            self.viewModel.deleteTracker(trackerId)
+            self.viewModel.filterBy(date: self.selectedDate)
+            self.reloadData()
+        }
+        
+        let cancel = UIAlertAction(title: "Отменить", style: .cancel)
+        
+        alert.addAction(delete)
+        alert.addAction(cancel)
+        
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = self.view
+            popover.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.maxY, width: 1, height: 1)
+        }
+        
+        present(alert, animated: true)
+    }
+    
+    // MARK: - Context Menu Highlight Preview
+    
+    private func cardOnlyPreview(for configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
+        guard let indexPath = configuration.identifier as? NSIndexPath,
+              let cell = collectionView.cellForItem(at: indexPath as IndexPath) as? TrackerCell else {
+            return nil
+        }
+        
+        let cardView = cell.cardViewForContextMenu
+        
+        let params = UIPreviewParameters()
+        params.backgroundColor = .clear
+        params.visiblePath = UIBezierPath(roundedRect: cardView.bounds, cornerRadius: 16)
+        
+        return UITargetedPreview(view: cardView, parameters: params)
+    }
 }
 
-// MARK: - StoreUpdateDelegate (получаем обновления от FRC)
+// MARK: - StoreUpdateDelegate
 
 extension TrackersViewController: StoreUpdateDelegate {
     func didUpdate(_ update: StoreUpdate) {
@@ -285,8 +333,12 @@ extension TrackersViewController: StoreUpdateDelegate {
 
 extension TrackersViewController: UICollectionViewDataSource {
     
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        viewModel.numberOfSections()
+    }
+    
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        viewModel.filteredTrackers.count
+        viewModel.numberOfItems(in: section)
     }
     
     func collectionView(_ collectionView: UICollectionView,
@@ -299,7 +351,7 @@ extension TrackersViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         
-        let tracker = viewModel.filteredTrackers[indexPath.item]
+        let tracker = viewModel.tracker(at: indexPath)
         
         let completed = viewModel.isTrackerCompleted(tracker.id, on: selectedDate)
         let count = viewModel.completedCount(for: tracker.id)
@@ -317,6 +369,29 @@ extension TrackersViewController: UICollectionViewDataSource {
         
         return cell
     }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        viewForSupplementaryElementOfKind kind: String,
+                        at indexPath: IndexPath) -> UICollectionReusableView {
+        
+        guard kind == UICollectionView.elementKindSectionHeader else {
+            return UICollectionReusableView()
+        }
+        
+        let header = collectionView.dequeueReusableSupplementaryView(
+            ofKind: kind,
+            withReuseIdentifier: SectionHeaderView.reuseId,
+            for: indexPath
+        ) as! SectionHeaderView
+        
+        if let title = viewModel.sectionTitle(indexPath.section) {
+            header.configure(title: title)
+        } else {
+            header.configure(title: "")
+        }
+        
+        return header
+    }
 }
 
 // MARK: - TrackerCellDelegate
@@ -327,7 +402,7 @@ extension TrackersViewController: TrackerCellDelegate {
         guard let indexPath = collectionView.indexPath(for: cell) else { return }
         if isFuture(selectedDate) { return }
         
-        let tracker = viewModel.filteredTrackers[indexPath.item]
+        let tracker = viewModel.tracker(at: indexPath)
         
         if viewModel.isTrackerCompleted(tracker.id, on: selectedDate) {
             viewModel.uncompleteTracker(tracker.id, on: selectedDate)
@@ -339,7 +414,7 @@ extension TrackersViewController: TrackerCellDelegate {
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
+// MARK: - UICollectionViewDelegateFlowLayout + Context Menu
 
 extension TrackersViewController: UICollectionViewDelegateFlowLayout {
     
@@ -356,6 +431,63 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
         let itemWidth = floor(availableWidth / columns)
         return CGSize(width: itemWidth, height: 130)
     }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        layout collectionViewLayout: UICollectionViewLayout,
+                        referenceSizeForHeaderInSection section: Int) -> CGSize {
+        
+        if viewModel.isUncategorizedSection(section) {
+            return .zero
+        }
+        return CGSize(width: collectionView.bounds.width, height: 32)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        contextMenuConfigurationForItemAt indexPath: IndexPath,
+                        point: CGPoint) -> UIContextMenuConfiguration? {
+        
+        let tracker = viewModel.tracker(at: indexPath)
+        
+        return UIContextMenuConfiguration(
+            identifier: indexPath as NSIndexPath,
+            previewProvider: nil
+        ) { [weak self] _ in
+            guard let self else { return nil }
+            
+            let pinAction = UIAction(title: "Закрепить") { _ in
+            }
+            
+            let editAction = UIAction(title: "Редактировать") { _ in
+            }
+            
+            let deleteAction = UIAction(title: "Удалить", attributes: .destructive) { _ in
+                self.presentDeleteAlert(trackerId: tracker.id)
+            }
+            
+            return UIMenu(children: [pinAction, editAction, deleteAction])
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        previewForHighlightingContextMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
+        cardOnlyPreview(for: configuration)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        previewForDismissingContextMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
+        cardOnlyPreview(for: configuration)
+    }
+    func collectionView(_ collectionView: UICollectionView,
+                        layout collectionViewLayout: UICollectionViewLayout,
+                        insetForSectionAt section: Int) -> UIEdgeInsets {
+        
+        if viewModel.isUncategorizedSection(section) {
+            return UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        }
+        
+        return UIEdgeInsets(top: 0, left: 16, bottom: 16, right: 16)
+    }
+    
 }
 
 // MARK: - UI Factory
@@ -374,14 +506,7 @@ extension TrackersViewController {
     static func makeSearchField() -> UISearchTextField {
         let s = UISearchTextField()
         s.placeholder = "Поиск"
-        
-        s.backgroundColor = UIColor(
-            red: 240/255,
-            green: 240/255,
-            blue: 240/255,
-            alpha: 1
-        )
-        
+        s.backgroundColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
         s.layer.cornerRadius = 8
         s.translatesAutoresizingMaskIntoConstraints = false
         return s
