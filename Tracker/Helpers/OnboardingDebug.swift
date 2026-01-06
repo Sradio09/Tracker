@@ -1,18 +1,26 @@
 import Foundation
 
-enum OnboardingDebug {
-    
-    static let alwaysShowOnboarding = true
-    
-    static func shouldShowOnboarding() -> Bool {
+enum OnboardingState {
+
+    // MARK: - Constants
+
+    private static let onboardingShownKey = "onboardingShown"
+
+    // MARK: - Debug
+
+    static let alwaysShowOnboarding = false
+
+    // MARK: - Public API
+
+    static func shouldShow() -> Bool {
         if alwaysShowOnboarding {
             return true
         }
-        return !UserDefaults.standard.bool(forKey: "onboardingShown")
+        return !UserDefaults.standard.bool(forKey: onboardingShownKey)
     }
-    
-    static func markOnboardingShown() {
-        UserDefaults.standard.set(true, forKey: "onboardingShown")
+
+    static func markShown() {
+        UserDefaults.standard.set(true, forKey: onboardingShownKey)
     }
 }
 

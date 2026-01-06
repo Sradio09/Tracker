@@ -22,11 +22,7 @@ final class TrackerStore: NSObject {
     }
     
     private static func makeViewContext() -> NSManagedObjectContext {
-        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
-            assertionFailure("AppDelegate is not available")
-            return NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
-        }
-        return appDelegate.persistentContainer.viewContext
+        DataBaseStore.shared.viewContext
     }
     
     private lazy var fetchedResultsController: NSFetchedResultsController<TrackerCoreData> = {

@@ -16,10 +16,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func setupWindow(with windowScene: UIWindowScene) {
         let window = UIWindow(windowScene: windowScene)
         
-        if OnboardingDebug.shouldShowOnboarding() {
+        if OnboardingState.shouldShowOnboarding() {
             let onboarding = OnboardingPageViewController()
             onboarding.onFinish = { [weak window] in
-                OnboardingDebug.markOnboardingShown()
+                OnboardingState.markOnboardingShown()
                 window?.rootViewController = TabBarController()
             }
             window.rootViewController = onboarding
