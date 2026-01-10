@@ -23,9 +23,9 @@ final class ScheduleViewController: UIViewController {
     
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Расписание"
+        label.text = NSLocalizedString("create_tracker.schedule", comment: "Schedule")
         label.font = .systemFont(ofSize: 16, weight: .medium)
-        label.textColor = .black
+        label.textColor = AppColors.textPrimary
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -36,7 +36,7 @@ final class ScheduleViewController: UIViewController {
         v.translatesAutoresizingMaskIntoConstraints = false
         v.layer.cornerRadius = 16
         v.clipsToBounds = true
-        v.backgroundColor = UIColor(red: 247/255, green: 248/255, blue: 249/255, alpha: 1)
+        v.backgroundColor = AppColors.inputBackground
         return v
     }()
     
@@ -52,9 +52,9 @@ final class ScheduleViewController: UIViewController {
     
     private lazy var doneButton: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.title = "Готово"
-        config.baseForegroundColor = .white
-        config.background.backgroundColor = .black
+        config.title = NSLocalizedString("common.done", comment: "Done")
+        config.baseForegroundColor = AppColors.primaryButtonTitle
+        config.background.backgroundColor = AppColors.primaryButtonBackground
         config.background.cornerRadius = 16
         config.contentInsets = NSDirectionalEdgeInsets(top: 18, leading: 16, bottom: 18, trailing: 16)
         
@@ -82,7 +82,7 @@ final class ScheduleViewController: UIViewController {
     // MARK: - UI
     
     private func setupUI() {
-        view.backgroundColor = .white
+        view.backgroundColor = AppColors.background
         setupNavigation()
     }
     
@@ -104,7 +104,7 @@ final class ScheduleViewController: UIViewController {
             bottom: 0,
             right: Constants.separatorLeft
         )
-        tableView.separatorColor = UIColor(red: 174/255, green: 175/255, blue: 180/255, alpha: 1)
+        tableView.separatorColor = AppColors.separator
     }
     
     // MARK: - Layout
@@ -183,7 +183,7 @@ extension ScheduleViewController: UITableViewDataSource {
         cell.contentView.backgroundColor = .clear
         cell.selectionStyle = .none
         
-        cell.textLabel?.text = day.fullName
+        cell.textLabel?.text = day.localizedFull
         cell.textLabel?.font = .systemFont(ofSize: 17)
         
         if indexPath.row == WeekDay.allCases.count - 1 {
@@ -199,7 +199,7 @@ extension ScheduleViewController: UITableViewDataSource {
         
         let toggle = UISwitch()
         toggle.isOn = selectedDays.contains(day)
-        toggle.onTintColor = .systemBlue
+        toggle.onTintColor = AppColors.accentBlue
         toggle.thumbTintColor = .white
         toggle.tag = indexPath.row
         toggle.addTarget(self, action: #selector(switchChanged(_:)), for: .valueChanged)

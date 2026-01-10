@@ -11,7 +11,7 @@ final class NewCategoryViewController: UIViewController, UITextFieldDelegate {
     private let titleLabel: UILabel = {
         let l = UILabel()
         l.font = .systemFont(ofSize: 16, weight: .medium)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
         l.textAlignment = .center
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
@@ -19,8 +19,8 @@ final class NewCategoryViewController: UIViewController, UITextFieldDelegate {
     
     private lazy var textField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Введите название категории"
-        tf.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.30)
+        tf.placeholder = NSLocalizedString("categories.name.placeholder", comment: "Category name placeholder")
+        tf.backgroundColor = AppColors.inputBackground
         tf.layer.cornerRadius = 16
         tf.setLeftPaddingPoints(16)
         tf.font = .systemFont(ofSize: 17, weight: .regular)
@@ -36,14 +36,14 @@ final class NewCategoryViewController: UIViewController, UITextFieldDelegate {
     
     private lazy var doneButton: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.title = "Готово"
-        config.baseForegroundColor = .white
-        config.background.backgroundColor = .systemGray3
+        config.title = NSLocalizedString("common.done", comment: "Done")
+        config.baseForegroundColor = AppColors.primaryButtonTitle
+        config.background.backgroundColor = AppColors.disabledButtonBackground
         config.background.cornerRadius = 16
         config.contentInsets = NSDirectionalEdgeInsets(top: 18, leading: 16, bottom: 18, trailing: 16)
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var out = incoming
-            out.foregroundColor = UIColor.white
+            out.foregroundColor = AppColors.primaryButtonTitle
             return out
         }
         
@@ -63,19 +63,21 @@ final class NewCategoryViewController: UIViewController, UITextFieldDelegate {
     
     // MARK: - Init
     
-    init(screenTitle: String = "Новая категория", initialText: String? = nil) {
+    init(screenTitle: String = NSLocalizedString("categories.new.title", comment: "New category title"), initialText: String? = nil) {
         self.screenTitle = screenTitle
         self.initialText = initialText
         super.init(nibName: nil, bundle: nil)
     }
     
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        return nil
+    }
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = AppColors.background
         
         titleLabel.text = screenTitle
         textField.text = initialText
@@ -136,7 +138,7 @@ final class NewCategoryViewController: UIViewController, UITextFieldDelegate {
         doneButton.isUserInteractionEnabled = enabled
         
         var config = doneButton.configuration
-        config?.background.backgroundColor = enabled ? .black : .systemGray3
+        config?.background.backgroundColor = enabled ? AppColors.primaryButtonBackground : AppColors.disabledButtonBackground
         doneButton.configuration = config
     }
     
@@ -147,7 +149,7 @@ final class NewCategoryViewController: UIViewController, UITextFieldDelegate {
         toolbar.sizeToFit()
         
         let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let done = UIBarButtonItem(title: "Готово", style: .done, target: self, action: #selector(toolbarDoneTapped))
+        let done = UIBarButtonItem(title: NSLocalizedString("common.done", comment: "Done"), style: .done, target: self, action: #selector(toolbarDoneTapped))
         toolbar.items = [flex, done]
         
         return toolbar

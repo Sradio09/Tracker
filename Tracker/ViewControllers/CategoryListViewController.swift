@@ -31,9 +31,9 @@ final class CategoryListViewController: UIViewController {
     
     private let titleLabel: UILabel = {
         let l = UILabel()
-        l.text = "Категория"
+        l.text = NSLocalizedString("categories.title", comment: "Categories title")
         l.font = .systemFont(ofSize: 16, weight: .medium)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
         l.textAlignment = .center
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
@@ -44,7 +44,7 @@ final class CategoryListViewController: UIViewController {
         v.translatesAutoresizingMaskIntoConstraints = false
         v.layer.cornerRadius = 16
         v.clipsToBounds = true
-        v.backgroundColor = UIColor(red: 247/255, green: 248/255, blue: 249/255, alpha: 1)
+        v.backgroundColor = AppColors.inputBackground
         return v
     }()
     
@@ -63,15 +63,15 @@ final class CategoryListViewController: UIViewController {
     
     private lazy var addButton: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.title = "Добавить категорию"
-        config.baseForegroundColor = .white
-        config.background.backgroundColor = .black
+        config.title = NSLocalizedString("categories.add", comment: "Add category")
+        config.baseForegroundColor = AppColors.primaryButtonTitle
+        config.background.backgroundColor = AppColors.primaryButtonBackground
         config.background.cornerRadius = 16
         config.contentInsets = NSDirectionalEdgeInsets(top: 18, leading: 16, bottom: 18, trailing: 16)
         
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
-            outgoing.foregroundColor = UIColor.white
+            outgoing.foregroundColor = AppColors.primaryButtonTitle
             return outgoing
         }
         
@@ -90,17 +90,19 @@ final class CategoryListViewController: UIViewController {
     }()
     
     private let emptyImageView: UIImageView = {
-        let iv = UIImageView(image: UIImage(named: "emptyTrackerIcon"))
+        let image = UIImage(named: "emptyTrackerIcon")?.withRenderingMode(.alwaysTemplate)
+        let iv = UIImageView(image: image)
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.contentMode = .scaleAspectFit
+        iv.tintColor = AppColors.separator
         return iv
     }()
     
     private let emptyLabel: UILabel = {
         let l = UILabel()
-        l.text = "Привычки и события можно\nобъединить по смыслу"
+        l.text = NSLocalizedString("categories.empty.subtitle", comment: "Empty state subtitle")
         l.font = .systemFont(ofSize: 12, weight: .medium)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
         l.numberOfLines = 0
         l.textAlignment = .center
         l.translatesAutoresizingMaskIntoConstraints = false
@@ -118,13 +120,15 @@ final class CategoryListViewController: UIViewController {
         super.init(nibName: nil, bundle: nil)
     }
     
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        return nil
+    }
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = AppColors.background
         
         setupNavigation()
         setupBindings()
@@ -232,21 +236,21 @@ final class CategoryListViewController: UIViewController {
     
     private func presentError(_ message: String) {
         let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Ок", style: .default))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("common.ok", comment: "OK"), style: .default))
         present(alert, animated: true)
     }
     
     // MARK: - Actions
     
     @objc private func addTapped() {
-        let vc = NewCategoryViewController(screenTitle: "Новая категория", initialText: nil)
+        let vc = NewCategoryViewController(screenTitle: NSLocalizedString("categories.new.title", comment: "New category"), initialText: nil)
         vc.onSave = { [weak self] title in
             guard let self else { return }
             do {
                 try TrackerCategoryStore().addCategory(title: title)
                 self.reloadUI()
             } catch {
-                self.presentError("Не удалось создать категорию")
+                self.presentError(NSLocalizedString("error.category.create", comment: "Create category error"))
             }
         }
         navigationController?.pushViewController(vc, animated: true)
@@ -255,14 +259,14 @@ final class CategoryListViewController: UIViewController {
     private func presentDeleteAlert(indexPath: IndexPath) {
         let alert = UIAlertController(
             title: nil,
-            message: "Уверены что хотите удалить категорию?",
+            message: NSLocalizedString("categories.delete.message", comment: "Delete category message"),
             preferredStyle: .actionSheet
         )
         
-        alert.addAction(UIAlertAction(title: "Удалить", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: NSLocalizedString("common.delete", comment: "Delete"), style: .destructive) { [weak self] _ in
             self?.viewModel.deleteCategory(at: indexPath)
         })
-        alert.addAction(UIAlertAction(title: "Отменить", style: .cancel))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("common.cancel", comment: "Cancel"), style: .cancel))
         
         if let pop = alert.popoverPresentationController {
             pop.sourceView = view
@@ -340,11 +344,11 @@ extension CategoryListViewController: UITableViewDelegate {
         ) { [weak self] _ in
             guard let self else { return nil }
             
-            let edit = UIAction(title: "Редактировать") { _ in
+            let edit = UIAction(title: NSLocalizedString("common.edit", comment: "Edit")) { _ in
                 let currentTitle = self.viewModel.categoryTitle(at: indexPath)
                 
                 let vc = NewCategoryViewController(
-                    screenTitle: "Редактирование категории",
+                    screenTitle: NSLocalizedString("categories.edit.title", comment: "Edit category"),
                     initialText: currentTitle
                 )
                 
@@ -355,7 +359,7 @@ extension CategoryListViewController: UITableViewDelegate {
                 self.navigationController?.pushViewController(vc, animated: true)
             }
             
-            let delete = UIAction(title: "Удалить", attributes: .destructive) { _ in
+            let delete = UIAction(title: NSLocalizedString("common.delete", comment: "Delete"), attributes: .destructive) { _ in
                 self.presentDeleteAlert(indexPath: indexPath)
             }
             
@@ -373,4 +377,5 @@ extension CategoryListViewController: UITableViewDelegate {
         cardOnlyPreview(for: configuration)
     }
 }
+
 

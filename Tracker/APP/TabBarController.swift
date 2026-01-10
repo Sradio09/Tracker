@@ -17,8 +17,8 @@ final class TabBarController: UITabBarController {
             rootViewController: TrackersViewController()
         )
         trackersVC.tabBarItem = UITabBarItem(
-            title: "Трекеры",
-            image: UIImage(systemName: "record.circle"),
+            title: NSLocalizedString("tab.trackers", comment: "Trackers tab title"),
+            image: UIImage(systemName: "record.circle.fill"),
             selectedImage: UIImage(systemName: "record.circle.fill")
         )
         
@@ -26,7 +26,7 @@ final class TabBarController: UITabBarController {
             rootViewController: StatisticsViewController()
         )
         statsVC.tabBarItem = UITabBarItem(
-            title: "Статистика",
+            title: NSLocalizedString("tab.statistics", comment: "Statistics tab title"),
             image: UIImage(systemName: "hare.fill"),
             selectedImage: UIImage(systemName: "hare.fill")
         )
@@ -39,14 +39,8 @@ final class TabBarController: UITabBarController {
     private func setupTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = .white
-        
-        appearance.shadowColor = UIColor(
-            red: 174/255,
-            green: 175/255,
-            blue: 180/255,
-            alpha: 1
-        )
+        appearance.backgroundColor = AppColors.background
+        appearance.shadowColor = AppColors.tabBarSeparator
         
         tabBar.standardAppearance = appearance
         
@@ -55,4 +49,5 @@ final class TabBarController: UITabBarController {
         }
     }
 }
+
 

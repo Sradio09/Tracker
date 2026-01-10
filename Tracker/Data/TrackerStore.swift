@@ -74,6 +74,30 @@ final class TrackerStore: NSObject {
         tracker.category = category
         try context.save()
     }
+    func updateTracker(
+        id: UUID,
+        name: String,
+        emoji: String,
+        colorHex: String,
+        schedule: Int16,
+        isPinned: Bool,
+        category: TrackerCategoryCoreData?
+    ) throws {
+        let request = TrackerCoreData.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+
+        guard let tracker = try context.fetch(request).first else { return }
+        tracker.name = name
+        tracker.emoji = emoji
+        tracker.colorHex = colorHex
+        tracker.schedule = schedule
+        tracker.isPinned = isPinned
+        tracker.category = category
+        try context.save()
+    }
+
+
     
     func deleteTracker(at indexPath: IndexPath) throws {
         let tracker = fetchedResultsController.object(at: indexPath)
@@ -94,6 +118,16 @@ final class TrackerStore: NSObject {
                 }
             }
         }
+    }
+
+    func setPinned(_ isPinned: Bool, for trackerId: UUID) throws {
+        let request = TrackerCoreData.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", trackerId as CVarArg)
+        request.fetchLimit = 1
+
+        guard let tracker = try context.fetch(request).first else { return }
+        tracker.isPinned = isPinned
+        try context.save()
     }
 }
 

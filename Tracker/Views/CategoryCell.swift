@@ -12,8 +12,8 @@ final class CategoryCell: UITableViewCell {
     private let cardView: UIView = {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.backgroundColor = UIColor(red: 247/255, green: 248/255, blue: 249/255, alpha: 1)
-        v.layer.cornerRadius = 16
+        v.backgroundColor = AppColors.inputBackground
+        v.layer.cornerRadius = 0
         v.clipsToBounds = true
         return v
     }()
@@ -22,14 +22,14 @@ final class CategoryCell: UITableViewCell {
         let l = UILabel()
         l.translatesAutoresizingMaskIntoConstraints = false
         l.font = .systemFont(ofSize: 17, weight: .regular)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
         return l
     }()
     
     private let checkmarkImageView: UIImageView = {
         let iv = UIImageView(image: UIImage(systemName: "checkmark"))
         iv.translatesAutoresizingMaskIntoConstraints = false
-        iv.tintColor = .systemBlue
+        iv.tintColor = AppColors.accentBlue
         iv.isHidden = true
         return iv
     }()
@@ -37,7 +37,7 @@ final class CategoryCell: UITableViewCell {
     private let separatorView: UIView = {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.backgroundColor = UIColor(red: 174/255, green: 175/255, blue: 180/255, alpha: 1)
+        v.backgroundColor = AppColors.separator
         return v
     }()
     
@@ -51,8 +51,10 @@ final class CategoryCell: UITableViewCell {
         setupUI()
     }
     
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        return nil
+    }
     override func prepareForReuse() {
         super.prepareForReuse()
         titleLabel.text = nil

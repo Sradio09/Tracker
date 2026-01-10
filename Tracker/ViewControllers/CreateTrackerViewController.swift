@@ -4,7 +4,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
     
     enum Constants {
         static let maxNameLength = 38
-        static let warningText = "Ограничение 38 символов"
+        static let warningText = NSLocalizedString("create_tracker.name.limit", comment: "Name length limit warning")
     }
     
     enum Section: Int, CaseIterable {
@@ -13,8 +13,8 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         
         var title: String {
             switch self {
-            case .emoji: return "Emoji"
-            case .color: return "Цвет"
+            case .emoji: return NSLocalizedString("create_tracker.section.emoji", comment: "Emoji section")
+            case .color: return NSLocalizedString("create_tracker.section.color", comment: "Color section")
             }
         }
     }
@@ -24,21 +24,49 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         case color(UIColor)
     }
     
+    enum Mode {
+        case create
+        case edit(tracker: Tracker, categoryTitle: String?, completedDays: Int)
+    }
+    
     // MARK: - UI
+    
+    // MARK: - Mode
+    
+    private let mode: Mode
+    var onUpdate: ((Tracker, String?) -> Void)?
+    
+    private var editTrackerId: UUID?
+    private var editIsPinned: Bool = false
+    
+    private var pendingEmojiIndexPath: IndexPath?
+    private var pendingColorIndexPath: IndexPath?
+    
     
     let titleLabel: UILabel = {
         let l = UILabel()
-        l.text = "Новая привычка"
+        l.text = NSLocalizedString("create_tracker.title", comment: "Create tracker title")
         l.font = .systemFont(ofSize: 16, weight: .medium)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
+        l.translatesAutoresizingMaskIntoConstraints = false
+        return l
+    }()
+    
+    private let daysLabel: UILabel = {
+        let l = UILabel()
+        l.font = .systemFont(ofSize: 32, weight: .bold)
+        l.textColor = AppColors.textPrimary
+        l.textAlignment = .center
+        l.numberOfLines = 1
+        l.isHidden = true
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
     
     lazy var nameField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Введите название трекера"
-        tf.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.30)
+        tf.placeholder = NSLocalizedString("create_tracker.name.placeholder", comment: "Name placeholder")
+        tf.backgroundColor = AppColors.inputBackground
         tf.layer.cornerRadius = 16
         tf.setLeftPaddingPoints(16)
         tf.font = .systemFont(ofSize: 17, weight: .regular)
@@ -55,7 +83,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
     let warningLabel: UILabel = {
         let label = UILabel()
         label.text = Constants.warningText
-        label.textColor = .systemRed
+        label.textColor = AppColors.accentRed
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .center
         label.numberOfLines = 0
@@ -64,12 +92,12 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return label
     }()
     
-    lazy var categoryButton: UIButton = Self.makeRowButton(title: "Категория", subtitle: nil)
-    lazy var scheduleButton: UIButton = Self.makeRowButton(title: "Расписание", subtitle: nil)
+    lazy var categoryButton: UIButton = Self.makeRowButton(title: NSLocalizedString("create_tracker.category", comment: "Category"), subtitle: nil)
+    lazy var scheduleButton: UIButton = Self.makeRowButton(title: NSLocalizedString("create_tracker.schedule", comment: "Schedule"), subtitle: nil)
     
     let separator: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor(red: 174/255, green: 175/255, blue: 180/255, alpha: 1)
+        v.backgroundColor = AppColors.separator
         v.translatesAutoresizingMaskIntoConstraints = false
         v.heightAnchor.constraint(equalToConstant: 1).isActive = true
         return v
@@ -77,9 +105,9 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
     
     lazy var cancelButton: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.title = "Отменить"
-        config.baseForegroundColor = .systemRed
-        config.background.backgroundColor = .white
+        config.title = NSLocalizedString("common.cancel", comment: "Cancel")
+        config.baseForegroundColor = AppColors.accentRed
+        config.background.backgroundColor = AppColors.background
         config.background.cornerRadius = 16
         config.contentInsets = NSDirectionalEdgeInsets(top: 18, leading: 16, bottom: 18, trailing: 16)
         
@@ -87,7 +115,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         b.layer.cornerRadius = 16
         b.clipsToBounds = true
         b.layer.borderWidth = 1
-        b.layer.borderColor = UIColor.systemRed.cgColor
+        b.layer.borderColor = AppColors.accentRed.cgColor
         b.translatesAutoresizingMaskIntoConstraints = false
         b.heightAnchor.constraint(equalToConstant: 60).isActive = true
         return b
@@ -95,14 +123,14 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
     
     lazy var createButton: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.title = "Создать"
-        config.baseForegroundColor = .white
-        config.background.backgroundColor = .systemGray3
+        config.title = NSLocalizedString("common.create", comment: "Create")
+        config.baseForegroundColor = AppColors.primaryButtonTitle
+        config.background.backgroundColor = AppColors.disabledButtonBackground
         config.background.cornerRadius = 16
         config.contentInsets = NSDirectionalEdgeInsets(top: 18, leading: 16, bottom: 18, trailing: 16)
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
-            outgoing.foregroundColor = UIColor.white
+            outgoing.foregroundColor = AppColors.primaryButtonTitle
             return outgoing
         }
         
@@ -128,7 +156,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
     
     lazy var listCard: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor(red: 247/255, green: 248/255, blue: 249/255, alpha: 1)
+        v.backgroundColor = AppColors.inputBackground
         v.layer.cornerRadius = 16
         v.clipsToBounds = true
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -192,29 +220,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         "😇","😡","🥶","🤔","🙌","🍔",
         "🥦","🏓","🥇","🎸","🏝️","😪"
     ]
-    
-    let colors: [UIColor] = [
-        UIColor(red: 1, green: 0.23, blue: 0.19, alpha: 1),
-        UIColor(red: 1, green: 0.58, blue: 0.0, alpha: 1),
-        UIColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1),
-        UIColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1),
-        UIColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1),
-        UIColor(red: 1.0, green: 0.35, blue: 0.8, alpha: 1),
-        
-        UIColor(red: 1.0, green: 0.8, blue: 0.8, alpha: 1),
-        UIColor(red: 0.35, green: 0.68, blue: 1.0, alpha: 1),
-        UIColor(red: 0.2, green: 0.9, blue: 0.7, alpha: 1),
-        UIColor(red: 0.2, green: 0.2, blue: 0.4, alpha: 1),
-        UIColor(red: 1.0, green: 0.35, blue: 0.3, alpha: 1),
-        UIColor(red: 1.0, green: 0.6, blue: 0.85, alpha: 1),
-        
-        UIColor(red: 1.0, green: 0.78, blue: 0.55, alpha: 1),
-        UIColor(red: 0.45, green: 0.52, blue: 1.0, alpha: 1),
-        UIColor(red: 0.35, green: 0.2, blue: 0.95, alpha: 1),
-        UIColor(red: 0.65, green: 0.35, blue: 0.95, alpha: 1),
-        UIColor(red: 0.55, green: 0.45, blue: 0.95, alpha: 1),
-        UIColor(red: 0.2, green: 0.85, blue: 0.35, alpha: 1)
-    ]
+    let colors: [UIColor] = AppColors.selectionColors
     
     // MARK: - Stored
     
@@ -230,12 +236,25 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
     
     var selectedEmoji: String?
     var selectedColor: UIColor?
+    // MARK: - Init
+    
+    init(mode: Mode = .create) {
+        self.mode = mode
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        return nil
+    }
+    
+    
     
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = AppColors.background
         
         setupUI()
         setupActions()
@@ -245,6 +264,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         
         updateScheduleSubtitle()
         updateCategorySubtitle()
+        configureForMode()
         validate()
     }
     
@@ -264,15 +284,35 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         
         let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         
-        let tracker = Tracker(
-            id: UUID(),
-            name: name,
-            color: selectedColor ?? .systemBlue,
-            emoji: selectedEmoji ?? "🙂",
-            schedule: selectedSchedule
-        )
+        switch mode {
+        case .create:
+            let tracker = Tracker(
+                id: UUID(),
+                name: name,
+                color: selectedColor ?? AppColors.accentBlue,
+                emoji: selectedEmoji ?? "🙂",
+                schedule: selectedSchedule,
+                isPinned: false
+            )
+            onCreate?(tracker, selectedCategory)
+            
+        case .edit:
+            guard let id = editTrackerId else {
+                assertionFailure("Edit mode but tracker id is missing")
+                return
+            }
+            
+            let tracker = Tracker(
+                id: id,
+                name: name,
+                color: selectedColor ?? AppColors.accentBlue,
+                emoji: selectedEmoji ?? "🙂",
+                schedule: selectedSchedule,
+                isPinned: editIsPinned
+            )
+            onUpdate?(tracker, selectedCategory)
+        }
         
-        onCreate?(tracker, selectedCategory)
         dismiss(animated: true)
     }
     
@@ -313,6 +353,68 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         categoryButton.configuration = config
     }
     
+    
+    // MARK: - Mode configuration
+    
+    private func configureForMode() {
+        switch mode {
+        case .create:
+            titleLabel.text = NSLocalizedString("create_tracker.title", comment: "Create tracker title")
+            var c = createButton.configuration
+            c?.title = NSLocalizedString("common.create", comment: "Create")
+            createButton.configuration = c
+            
+        case .edit(let tracker, let categoryTitle, let completedDays):
+            titleLabel.text = NSLocalizedString("tracker.edit.title", comment: "Edit tracker title")
+            var c = createButton.configuration
+            c?.title = NSLocalizedString("common.save", comment: "Save")
+            createButton.configuration = c
+            
+            editTrackerId = tracker.id
+            editIsPinned = tracker.isPinned
+            
+            // Days label
+            let daysText = String.localizedStringWithFormat(
+                NSLocalizedString("stats.days_count", comment: "Days count"),
+                completedDays
+            )
+            daysLabel.text = daysText
+            daysLabel.isHidden = false
+            
+            if daysLabel.superview == nil {
+                topStack.insertArrangedSubview(daysLabel, at: 0)
+                topStack.setCustomSpacing(24, after: daysLabel)
+            }
+            
+            // Prefill
+            nameField.text = tracker.name
+            selectedSchedule = tracker.schedule
+            selectedCategory = categoryTitle
+            selectedEmoji = tracker.emoji
+            selectedColor = tracker.color
+            
+            
+            if let emojiIndex = emojis.firstIndex(of: tracker.emoji) {
+                pendingEmojiIndexPath = IndexPath(item: emojiIndex, section: Section.emoji.rawValue)
+                selectedEmojiIndexPath = pendingEmojiIndexPath
+            }
+            if let colorIndex = colors.firstIndex(where: { $0.isEqual(tracker.color) }) {
+                pendingColorIndexPath = IndexPath(item: colorIndex, section: Section.color.rawValue)
+                selectedColorIndexPath = pendingColorIndexPath
+            }
+        }
+    }
+    
+    func applyInitialSelectionIfNeeded() {
+        if let emoji = pendingEmojiIndexPath {
+            selectionCollectionView.selectItem(at: emoji, animated: false, scrollPosition: [])
+            pendingEmojiIndexPath = nil
+        }
+        if let color = pendingColorIndexPath {
+            selectionCollectionView.selectItem(at: color, animated: false, scrollPosition: [])
+            pendingColorIndexPath = nil
+        }
+    }
     // MARK: - Validation
     
     func validate() {
@@ -329,7 +431,7 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         createButton.isUserInteractionEnabled = isValid
         
         var config = createButton.configuration
-        config?.background.backgroundColor = isValid ? .black : .systemGray3
+        config?.background.backgroundColor = isValid ? AppColors.primaryButtonBackground : AppColors.disabledButtonBackground
         createButton.configuration = config
     }
     
@@ -354,4 +456,5 @@ final class CreateTrackerViewController: UIViewController, UITextFieldDelegate {
         return true
     }
 }
+
 
