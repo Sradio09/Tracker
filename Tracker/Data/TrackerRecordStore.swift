@@ -44,7 +44,7 @@ final class TrackerRecordStore: NSObject {
         return frc
     }()
     
-    // MARK: - Public API (без CoreData наружу)
+    // MARK: - Public API
     
     func fetchAllRecords() -> [TrackerRecord] {
         let objects = fetchedResultsController.fetchedObjects ?? []

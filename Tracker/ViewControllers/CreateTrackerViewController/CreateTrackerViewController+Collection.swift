@@ -33,7 +33,7 @@ extension CreateTrackerViewController: UICollectionViewDelegate {
 
             let headerSize = NSCollectionLayoutSize(
                 widthDimension: .fractionalWidth(1.0),
-                heightDimension: .absolute(28)
+                heightDimension: .absolute(34)
             )
             let header = NSCollectionLayoutBoundarySupplementaryItem(
                 layoutSize: headerSize,
@@ -108,6 +108,7 @@ extension CreateTrackerViewController: UICollectionViewDelegate {
         dataSource.apply(snapshot, animatingDifferences: false) { [weak self] in
             self?.updateSelectionCollectionHeight()
             self?.view.layoutIfNeeded()
+            self?.applyInitialSelectionIfNeeded()
         }
     }
 

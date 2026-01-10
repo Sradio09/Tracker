@@ -76,7 +76,7 @@ extension CreateTrackerViewController {
         toolbar.sizeToFit()
         
         let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let done = UIBarButtonItem(title: "Готово", style: .done, target: self, action: #selector(doneTapped))
+        let done = UIBarButtonItem(title: NSLocalizedString("common.done", comment: "Done"), style: .done, target: self, action: #selector(doneTapped))
         
         toolbar.items = [flex, done]
         return toolbar
@@ -96,12 +96,12 @@ extension CreateTrackerViewController {
         let weekends: Set<WeekDay> = [.saturday, .sunday]
         let allDays = Set(WeekDay.allCases)
         
-        if set == allDays { return "Каждый день" }
-        if set == weekdays { return "Будние" }
-        if set == weekends { return "Выходные" }
+        if set == allDays { return NSLocalizedString("schedule.every_day", comment: "Every day") }
+        if set == weekdays { return NSLocalizedString("schedule.weekdays", comment: "Weekdays") }
+        if set == weekends { return NSLocalizedString("schedule.weekends", comment: "Weekends") }
         
         let ordered = WeekDay.allCases.filter { set.contains($0) }
-        return ordered.map { $0.rawValue }.joined(separator: ", ")
+        return ordered.map { $0.localizedShort }.joined(separator: ", ")
     }
     
     static func makeRowButton(title: String, subtitle: String? = nil) -> UIButton {
@@ -111,13 +111,13 @@ extension CreateTrackerViewController {
         config.subtitle = subtitle
         config.titleAlignment = .leading
         
-        config.baseForegroundColor = .black
+        config.baseForegroundColor = AppColors.textPrimary
         config.background.backgroundColor = .clear
         config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
         
         config.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var out = incoming
-            out.foregroundColor = UIColor.systemGray
+            out.foregroundColor = AppColors.separator
             out.font = UIFont.systemFont(ofSize: 17, weight: .regular)
             return out
         }
@@ -126,7 +126,7 @@ extension CreateTrackerViewController {
         config.imagePlacement = .trailing
         config.imagePadding = 8
         config.imageColorTransformer = UIConfigurationColorTransformer { _ in
-            UIColor(red: 174/255, green: 175/255, blue: 180/255, alpha: 1)
+            AppColors.separator
         }
         config.preferredSymbolConfigurationForImage =
         UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
@@ -139,4 +139,5 @@ extension CreateTrackerViewController {
         return button
     }
 }
+
 

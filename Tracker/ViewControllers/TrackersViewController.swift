@@ -2,7 +2,23 @@ import UIKit
 
 final class TrackersViewController: UIViewController {
     
-    private var selectedDate: Date = Date()
+    private let initialDate: Date
+    private var selectedDate: Date
+    private var selectedFilterOption: FiltersViewController.Option = .all
+    
+    // MARK: - Init
+    
+    init(initialDate: Date = Date()) {
+        self.initialDate = initialDate
+        self.selectedDate = initialDate
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        self.initialDate = Date()
+        self.selectedDate = self.initialDate
+        super.init(coder: coder)
+    }
     
     // MARK: - UI
     
@@ -14,17 +30,18 @@ final class TrackersViewController: UIViewController {
     }()
     
     private let emptyImageView: UIImageView = {
-        let iv = UIImageView(image: UIImage(named: "emptyTrackerIcon"))
+        let iv = UIImageView()
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.contentMode = .scaleAspectFit
         return iv
     }()
     
+    
     private let emptyLabel: UILabel = {
         let l = UILabel()
-        l.text = "Что будем отслеживать?"
+        l.text = NSLocalizedString("trackers.empty.title", comment: "Empty title")
         l.font = .systemFont(ofSize: 12, weight: .medium)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
         l.textAlignment = .center
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
@@ -34,7 +51,7 @@ final class TrackersViewController: UIViewController {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
         
-        v.backgroundColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
+        v.backgroundColor = AppColors.surface
         v.layer.cornerRadius = 12
         v.clipsToBounds = true
         
@@ -49,7 +66,7 @@ final class TrackersViewController: UIViewController {
     private let dateLabel: UILabel = {
         let l = UILabel()
         l.font = .systemFont(ofSize: 17)
-        l.textColor = .black
+        l.textColor = UIColor.black
         l.textAlignment = .center
         l.translatesAutoresizingMaskIntoConstraints = false
         l.setContentHuggingPriority(.required, for: .horizontal)
@@ -57,19 +74,34 @@ final class TrackersViewController: UIViewController {
         return l
     }()
     
+    
     private let datePicker: UIDatePicker = {
         let p = UIDatePicker()
         p.preferredDatePickerStyle = .compact
         p.datePickerMode = .date
         p.maximumDate = Date()
         p.locale = Locale(identifier: "ru_RU")
-        p.tintColor = .systemBlue
+        p.tintColor = AppColors.accentBlue
+        p.backgroundColor = AppColors.background
         p.translatesAutoresizingMaskIntoConstraints = false
         return p
     }()
     
-    private let titleLabel = TrackersViewController.makeTitle("Трекеры")
+    private let titleLabel = TrackersViewController.makeTitle(NSLocalizedString("trackers.title", comment: "Trackers title"))
     private let searchField = TrackersViewController.makeSearchField()
+    
+    private lazy var filtersButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.title = NSLocalizedString("filters.button", comment: "Filters")
+        config.baseBackgroundColor = AppColors.accentBlue
+        config.baseForegroundColor = .white
+        config.cornerStyle = .large
+        
+        let btn = UIButton(configuration: config)
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.addTarget(self, action: #selector(didTapFilters), for: .touchUpInside)
+        return btn
+    }()
     
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -79,7 +111,7 @@ final class TrackersViewController: UIViewController {
         layout.headerReferenceSize = CGSize(width: 0, height: 32)
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        cv.backgroundColor = .white
+        cv.backgroundColor = AppColors.background
         cv.translatesAutoresizingMaskIntoConstraints = false
         cv.dataSource = self
         cv.delegate = self
@@ -111,14 +143,24 @@ final class TrackersViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
-        
+        view.backgroundColor = AppColors.background
+    
         configureNavBar()
         setupLayout()
         setupSearch()
         setupKeyboardDismiss()
         
-        applySelectedDate(Date())
+        applySelectedDate(initialDate)
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        AnalyticsService.shared.report(event: .open, screen: .main)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        AnalyticsService.shared.report(event: .close, screen: .main)
     }
     
     // MARK: - NavBar
@@ -130,9 +172,9 @@ final class TrackersViewController: UIViewController {
             target: self,
             action: #selector(addTracker)
         )
-        navigationItem.leftBarButtonItem?.tintColor = .black
+        navigationItem.leftBarButtonItem?.tintColor = AppColors.textPrimary
         
-        navigationController?.navigationBar.tintColor = .systemBlue
+        navigationController?.navigationBar.tintColor = AppColors.accentBlue
         
         setupNavigationDatePicker()
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: dateContainerView)
@@ -170,6 +212,7 @@ final class TrackersViewController: UIViewController {
         view.addSubview(searchField)
         view.addSubview(collectionView)
         view.addSubview(emptyStateView)
+        view.addSubview(filtersButton)
         
         emptyStateView.addSubview(emptyImageView)
         emptyStateView.addSubview(emptyLabel)
@@ -188,6 +231,11 @@ final class TrackersViewController: UIViewController {
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
+            filtersButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 130),
+            filtersButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -130),
+            filtersButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            filtersButton.heightAnchor.constraint(equalToConstant: 50),
+            
             emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
@@ -201,11 +249,16 @@ final class TrackersViewController: UIViewController {
             emptyLabel.trailingAnchor.constraint(equalTo: emptyStateView.trailingAnchor),
             emptyLabel.bottomAnchor.constraint(equalTo: emptyStateView.bottomAnchor)
         ])
+        
+        collectionView.alwaysBounceVertical = true
+        updateCollectionInsetsForFiltersButton(isHidden: filtersButton.isHidden)
     }
     
     // MARK: - Actions
     
     @objc private func addTracker() {
+        AnalyticsService.shared.report(event: .click, screen: .main, item: .addTrack)
+        
         let vc = CreateTrackerViewController()
         
         vc.onCreate = { [weak self] tracker, categoryTitle in
@@ -237,6 +290,66 @@ final class TrackersViewController: UIViewController {
         reloadData()
     }
     
+    // MARK: - Filters
+    
+    @objc private func didTapFilters() {
+        AnalyticsService.shared.report(event: .click, screen: .main, item: .filter)
+        
+        let vc = FiltersViewController()
+        vc.selectedOption = selectedFilterOption
+        vc.onSelect = { [weak self] option in
+            guard let self else { return }
+            self.applyFilterSelection(option)
+        }
+        
+        vc.modalPresentationStyle = .pageSheet
+        if let sheet = vc.sheetPresentationController {
+            sheet.detents = [.large()]
+            sheet.prefersGrabberVisible = false
+            sheet.preferredCornerRadius = 16
+        }
+        present(vc, animated: true)
+    }
+    
+    private func applyFilterSelection(_ option: FiltersViewController.Option) {
+        selectedFilterOption = option
+        
+        switch option {
+        case .all:
+            viewModel.setFilter(.all)
+        case .today:
+            viewModel.setFilter(.all)
+            applySelectedDate(Date())
+        case .completed:
+            viewModel.setFilter(.completed)
+        case .uncompleted:
+            viewModel.setFilter(.uncompleted)
+        }
+        
+        presentedViewController?.dismiss(animated: true)
+        reloadData()
+    }
+    
+    private func updateFiltersButtonAppearance() {
+        if viewModel.isFilterActive {
+            filtersButton.configuration?.baseForegroundColor = AppColors.accentRed
+        } else {
+            filtersButton.configuration?.baseForegroundColor = .white
+        }
+    }
+    
+    private func updateCollectionInsetsForFiltersButton(isHidden: Bool) {
+        let baseBottom: CGFloat = 16
+        if isHidden {
+            collectionView.contentInset.bottom = baseBottom
+            collectionView.verticalScrollIndicatorInsets.bottom = baseBottom
+        } else {
+            let extra = 50 + 16 + baseBottom
+            collectionView.contentInset.bottom = extra
+            collectionView.verticalScrollIndicatorInsets.bottom = extra
+        }
+    }
+    
     // MARK: - Search
     
     private func setupSearch() {
@@ -248,10 +361,34 @@ final class TrackersViewController: UIViewController {
         reloadData()
     }
     
+    private var isSearchActive: Bool {
+        !(searchField.text ?? "").isEmpty
+    }
+    
     private func reloadData() {
+        let hasAnyTrackers = viewModel.hasAnyTrackers()
+        let hasTrackersForSelectedDay = viewModel.hasTrackers(for: selectedDate)
+        
+        let shouldHideFiltersButton = !hasTrackersForSelectedDay
+        filtersButton.isHidden = shouldHideFiltersButton
+        updateCollectionInsetsForFiltersButton(isHidden: shouldHideFiltersButton)
+        updateFiltersButtonAppearance()
+        
         let isEmpty = viewModel.numberOfSections() == 0
+        
         collectionView.isHidden = isEmpty
         emptyStateView.isHidden = !isEmpty
+        
+        if isEmpty {
+            if isSearchActive {
+                emptyImageView.image = UIImage(named: "emptySearchIcon")
+                emptyLabel.text = NSLocalizedString("trackers.empty.nothingFound", comment: "Nothing found")
+            } else {
+                emptyImageView.image = UIImage(named: "emptyTrackerIcon")
+                emptyLabel.text = NSLocalizedString("trackers.empty.title", comment: "Empty title")
+            }
+        }
+        
         collectionView.reloadData()
     }
     
@@ -277,18 +414,18 @@ final class TrackersViewController: UIViewController {
     private func presentDeleteAlert(trackerId: UUID) {
         let alert = UIAlertController(
             title: nil,
-            message: "Уверены что хотите удалить трекер?",
+            message: NSLocalizedString("trackers.delete.message", comment: "Delete tracker message"),
             preferredStyle: .actionSheet
         )
         
-        let delete = UIAlertAction(title: "Удалить", style: .destructive) { [weak self] _ in
+        let delete = UIAlertAction(title: NSLocalizedString("common.delete", comment: "Delete"), style: .destructive) { [weak self] _ in
             guard let self else { return }
             self.viewModel.deleteTracker(trackerId)
             self.viewModel.filterBy(date: self.selectedDate)
             self.reloadData()
         }
         
-        let cancel = UIAlertAction(title: "Отменить", style: .cancel)
+        let cancel = UIAlertAction(title: NSLocalizedString("common.cancel", comment: "Cancel"), style: .cancel)
         
         alert.addAction(delete)
         alert.addAction(cancel)
@@ -364,7 +501,8 @@ extension TrackersViewController: UICollectionViewDataSource {
             color: tracker.color,
             completedCount: count,
             isCompleted: completed,
-            isFutureDate: future
+            isFutureDate: future,
+            isPinned: tracker.isPinned
         )
         
         return cell
@@ -378,11 +516,14 @@ extension TrackersViewController: UICollectionViewDataSource {
             return UICollectionReusableView()
         }
         
-        let header = collectionView.dequeueReusableSupplementaryView(
+        guard let header = collectionView.dequeueReusableSupplementaryView(
             ofKind: kind,
             withReuseIdentifier: SectionHeaderView.reuseId,
             for: indexPath
-        ) as! SectionHeaderView
+        ) as? SectionHeaderView else {
+            assertionFailure("Expected SectionHeaderView")
+            return UICollectionReusableView()
+        }
         
         if let title = viewModel.sectionTitle(indexPath.section) {
             header.configure(title: title)
@@ -401,6 +542,8 @@ extension TrackersViewController: TrackerCellDelegate {
     func trackerCellDidTapComplete(_ cell: TrackerCell) {
         guard let indexPath = collectionView.indexPath(for: cell) else { return }
         if isFuture(selectedDate) { return }
+        
+        AnalyticsService.shared.report(event: .click, screen: .main, item: .track)
         
         let tracker = viewModel.tracker(at: indexPath)
         
@@ -454,13 +597,41 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
         ) { [weak self] _ in
             guard let self else { return nil }
             
-            let pinAction = UIAction(title: "Закрепить") { _ in
+            let pinTitleKey = tracker.isPinned ? "trackers.context.unpin" : "trackers.context.pin"
+            let pinAction = UIAction(title: NSLocalizedString(pinTitleKey, comment: "Pin/Unpin")) { _ in
+                self.viewModel.setPinned(!tracker.isPinned, for: tracker.id)
+                self.viewModel.filterBy(date: self.selectedDate)
+                self.reloadData()
             }
             
-            let editAction = UIAction(title: "Редактировать") { _ in
+            let editAction = UIAction(title: NSLocalizedString("common.edit", comment: "Edit")) { _ in
+                AnalyticsService.shared.report(event: .click, screen: .main, item: .edit)
+                
+                let categoryTitle = self.viewModel.categoryTitle(for: tracker.id)
+                let days = self.viewModel.completedCount(for: tracker.id)
+                
+                let vc = CreateTrackerViewController(mode: .edit(tracker: tracker, categoryTitle: categoryTitle, completedDays: days))
+                vc.onUpdate = { [weak self] updatedTracker, updatedCategoryTitle in
+                    guard let self else { return }
+                    self.viewModel.updateTracker(updatedTracker, categoryTitle: updatedCategoryTitle)
+                    self.viewModel.filterBy(date: self.selectedDate)
+                    self.reloadData()
+                }
+                
+                let nav = UINavigationController(rootViewController: vc)
+                if let sheet = nav.sheetPresentationController {
+                    sheet.detents = [.large()]
+                    sheet.prefersGrabberVisible = false
+                    sheet.preferredCornerRadius = 16
+                } else {
+                    nav.modalPresentationStyle = .pageSheet
+                }
+                
+                self.present(nav, animated: true)
             }
             
-            let deleteAction = UIAction(title: "Удалить", attributes: .destructive) { _ in
+            let deleteAction = UIAction(title: NSLocalizedString("common.delete", comment: "Delete"), attributes: .destructive) { _ in
+                AnalyticsService.shared.report(event: .click, screen: .main, item: .delete)
                 self.presentDeleteAlert(trackerId: tracker.id)
             }
             
@@ -477,6 +648,7 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
                         previewForDismissingContextMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
         cardOnlyPreview(for: configuration)
     }
+    
     func collectionView(_ collectionView: UICollectionView,
                         layout collectionViewLayout: UICollectionViewLayout,
                         insetForSectionAt section: Int) -> UIEdgeInsets {
@@ -487,7 +659,6 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
         
         return UIEdgeInsets(top: 0, left: 16, bottom: 16, right: 16)
     }
-    
 }
 
 // MARK: - UI Factory
@@ -498,18 +669,25 @@ extension TrackersViewController {
         let lbl = UILabel()
         lbl.text = text
         lbl.font = .systemFont(ofSize: 34, weight: .bold)
-        lbl.textColor = .black
+        lbl.textColor = AppColors.textPrimary
         lbl.translatesAutoresizingMaskIntoConstraints = false
         return lbl
     }
     
     static func makeSearchField() -> UISearchTextField {
         let s = UISearchTextField()
-        s.placeholder = "Поиск"
-        s.backgroundColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
+        s.attributedPlaceholder = NSAttributedString(
+            string: NSLocalizedString("common.search", comment: "Search"),
+            attributes: [
+                .foregroundColor: AppColors.searchText
+            ]
+        )
+        s.backgroundColor = AppColors.searchField
+        s.textColor = AppColors.searchText
+        s.tintColor = AppColors.searchText
+        s.leftView?.tintColor = AppColors.searchText
         s.layer.cornerRadius = 8
         s.translatesAutoresizingMaskIntoConstraints = false
         return s
     }
 }
-

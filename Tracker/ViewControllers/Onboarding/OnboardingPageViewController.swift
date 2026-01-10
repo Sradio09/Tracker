@@ -10,12 +10,12 @@ final class OnboardingPageViewController: UIPageViewController, UIPageViewContro
     
     private let pages: [OnboardingPage] = [
         OnboardingPage(
-            title: "Отслеживайте только то, что хотите",
+            title: NSLocalizedString("onboarding.page1.title", comment: "Onboarding page 1 title"),
             subtitle: "",
             backgroundImage: UIImage(named: "backgraundBlue")
         ),
         OnboardingPage(
-            title: "Даже если это\nне литры воды и йога",
+            title: NSLocalizedString("onboarding.page2.title", comment: "Onboarding page 2 title"),
             subtitle: "",
             backgroundImage: UIImage(named: "backgraundRed")
         )
@@ -49,7 +49,7 @@ final class OnboardingPageViewController: UIPageViewController, UIPageViewContro
         var attributes = AttributeContainer()
         attributes.font = .systemFont(ofSize: 16, weight: .medium)
         
-        config.attributedTitle = AttributedString("Вот это технологии!", attributes: attributes)
+        config.attributedTitle = AttributedString(NSLocalizedString("onboarding.button.next", comment: "Next button"), attributes: attributes)
         config.cornerStyle = .large
         config.baseBackgroundColor = .black
         config.baseForegroundColor = .white
@@ -141,7 +141,7 @@ final class OnboardingPageViewController: UIPageViewController, UIPageViewContro
     
     private func updateButtonTitle() {
         let isLast = pageControl.currentPage == pagesVC.count - 1
-        let title = isLast ? "Начать" : "Вот это технологии!"
+        let title = isLast ? NSLocalizedString("onboarding.button.start", comment: "Start button") : NSLocalizedString("onboarding.button.next", comment: "Next button")
         
         var attributes = AttributeContainer()
         attributes.font = .systemFont(ofSize: 16, weight: .medium)

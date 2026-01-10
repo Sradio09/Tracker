@@ -27,11 +27,21 @@ final class TrackerCell: UICollectionViewCell {
     
     private let emojiContainer: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor.white.withAlphaComponent(0.3)
+        v.backgroundColor = .white.withAlphaComponent(0.3)
         v.layer.cornerRadius = 12
         v.clipsToBounds = true
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
+    }()
+
+    private let pinImageView: UIImageView = {
+        let image = UIImage(systemName: "pin.fill")?.withRenderingMode(.alwaysTemplate)
+        let iv = UIImageView(image: image)
+        iv.tintColor = AppColors.background.withAlphaComponent(0.7)
+        iv.contentMode = .scaleAspectFit
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.isHidden = true
+        return iv
     }()
     
     private let emojiLabel: UILabel = {
@@ -53,14 +63,14 @@ final class TrackerCell: UICollectionViewCell {
     private let counterLabel: UILabel = {
         let l = UILabel()
         l.font = .systemFont(ofSize: 12, weight: .medium)
-        l.textColor = .black
+        l.textColor = AppColors.textPrimary
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
     
     private let completeButton: UIButton = {
         var config = UIButton.Configuration.filled()
-        config.baseForegroundColor = .white
+        config.baseForegroundColor = AppColors.primaryButtonTitle
         config.background.cornerRadius = 17
         config.contentInsets = .zero
         
@@ -77,8 +87,10 @@ final class TrackerCell: UICollectionViewCell {
         completeButton.addTarget(self, action: #selector(didTapComplete), for: .touchUpInside)
     }
     
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        return nil
+    }
     override func prepareForReuse() {
         super.prepareForReuse()
         emojiLabel.text = nil
@@ -88,6 +100,7 @@ final class TrackerCell: UICollectionViewCell {
         isFutureDate = false
         completeButton.isEnabled = true
         completeButton.alpha = 1
+        pinImageView.isHidden = true
     }
     
     // MARK: - Public
@@ -98,7 +111,8 @@ final class TrackerCell: UICollectionViewCell {
         color: UIColor,
         completedCount: Int,
         isCompleted: Bool,
-        isFutureDate: Bool
+        isFutureDate: Bool,
+        isPinned: Bool
     ) {
         self.isCompleted = isCompleted
         self.isFutureDate = isFutureDate
@@ -106,8 +120,9 @@ final class TrackerCell: UICollectionViewCell {
         cardView.backgroundColor = color
         emojiLabel.text = emoji
         nameLabel.text = trackerName
+        pinImageView.isHidden = !isPinned
         
-        counterLabel.text = "\(completedCount) \(daysWord(for: completedCount))"
+        counterLabel.text = String.localizedStringWithFormat(NSLocalizedString("stats.days_count", comment: "Days count"), completedCount)
         
         let symbolName = isCompleted ? "checkmark" : "plus"
         let image = UIImage(systemName: symbolName)?.withRenderingMode(.alwaysTemplate)
@@ -137,6 +152,7 @@ final class TrackerCell: UICollectionViewCell {
         
         cardView.addSubview(emojiContainer)
         emojiContainer.addSubview(emojiLabel)
+        cardView.addSubview(pinImageView)
         cardView.addSubview(nameLabel)
         
         NSLayoutConstraint.activate([
@@ -151,6 +167,12 @@ final class TrackerCell: UICollectionViewCell {
             emojiContainer.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 12),
             emojiContainer.widthAnchor.constraint(equalToConstant: 24),
             emojiContainer.heightAnchor.constraint(equalToConstant: 24),
+
+            // Pin
+            pinImageView.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 12),
+            pinImageView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -12),
+            pinImageView.widthAnchor.constraint(equalToConstant: 12),
+            pinImageView.heightAnchor.constraint(equalToConstant: 12),
             
             emojiLabel.centerXAnchor.constraint(equalTo: emojiContainer.centerXAnchor),
             emojiLabel.centerYAnchor.constraint(equalTo: emojiContainer.centerYAnchor),
@@ -176,15 +198,5 @@ final class TrackerCell: UICollectionViewCell {
     
     @objc private func didTapComplete() {
         delegate?.trackerCellDidTapComplete(self)
-    }
-    
-    // MARK: - Helpers
-    
-    private func daysWord(for count: Int) -> String {
-        let mod10 = count % 10
-        let mod100 = count % 100
-        if mod10 == 1 && mod100 != 11 { return "день" }
-        if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "дня" }
-        return "дней"
     }
 }

@@ -11,12 +11,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        
+
         _ = DataBaseStore.shared
 
-        window = UIWindow(frame: UIScreen.main.bounds)
-        window?.rootViewController = TabBarController()
-        window?.makeKeyAndVisible()
+        AnalyticsService.shared.activateIfNeeded()
 
         return true
     }
@@ -31,4 +29,3 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
 }
-

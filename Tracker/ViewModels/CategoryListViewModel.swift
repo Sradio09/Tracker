@@ -50,7 +50,7 @@ final class CategoryListViewModel {
             }
             onDataChanged?()
         } catch {
-            onError?("Не удалось удалить категорию")
+            onError?(NSLocalizedString("error.category.delete", comment: "Delete category error"))
         }
     }
     
@@ -64,7 +64,7 @@ final class CategoryListViewModel {
             }
             onDataChanged?()
         } catch {
-            onError?("Не удалось сохранить категорию")
+            onError?(NSLocalizedString("error.category.save", comment: "Save category error"))
         }
     }
 }

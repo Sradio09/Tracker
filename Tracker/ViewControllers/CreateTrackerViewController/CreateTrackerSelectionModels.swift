@@ -6,8 +6,8 @@ enum CreateTrackerSection: Int, CaseIterable {
     
     var title: String {
         switch self {
-        case .emoji: return "Emoji"
-        case .color: return "Цвет"
+        case .emoji: return NSLocalizedString("create_tracker.section.emoji", comment: "Emoji section")
+        case .color: return NSLocalizedString("create_tracker.section.color", comment: "Color section")
         }
     }
 }

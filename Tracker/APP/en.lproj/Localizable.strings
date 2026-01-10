@@ -1,0 +1,97 @@
+/* Common */
+"common.done" = "Done";
+"common.cancel" = "Cancel";
+"common.delete" = "Delete";
+"common.create" = "Create";
+"common.edit" = "Edit";
+"common.ok" = "OK";
+"common.search" = "Search";
+
+/* Tabs */
+"tab.trackers" = "Trackers";
+"tab.statistics" = "Statistics";
+
+/* Trackers */
+"trackers.title" = "Trackers";
+"trackers.empty.title" = "What will we track?";
+"trackers.delete.message" = "Are you sure you want to delete this tracker?";
+"trackers.context.pin" = "Pin";
+"trackers.context.unpin" = "Unpin";
+"trackers.section.pinned" = "Pinned";
+
+/* Statistics */
+"statistics.title" = "Statistics";
+
+/* Create tracker */
+"create_tracker.title" = "New Habit";
+"create_tracker.name.placeholder" = "Enter tracker name";
+"create_tracker.name.limit" = "Limit is 38 characters";
+"create_tracker.category" = "Category";
+"create_tracker.schedule" = "Schedule";
+"create_tracker.section.emoji" = "Emoji";
+"create_tracker.section.color" = "Color";
+
+/* Schedule summary */
+"schedule.every_day" = "Every day";
+"schedule.weekdays" = "Weekdays";
+"schedule.weekends" = "Weekends";
+
+/* Categories */
+"categories.title" = "Category";
+"categories.add" = "Add category";
+"categories.new.title" = "New category";
+"categories.edit.title" = "Edit category";
+"categories.name.placeholder" = "Enter category name";
+"categories.delete.message" = "Are you sure you want to delete this category?";
+"categories.empty.subtitle" = "You can group habits and events\nby meaning";
+"categories.uncategorized" = "Uncategorized";
+
+/* Errors */
+"error.category.create" = "Could not create category";
+"error.category.delete" = "Could not delete category";
+"error.category.save" = "Could not save category";
+
+/* Debug */
+"debug.tracker.save_failed" = "Failed to save tracker: %@";
+"debug.tracker.delete_failed" = "Failed to delete tracker: %@";
+"debug.record.save_failed" = "Failed to save completion record: %@";
+"debug.record.delete_failed" = "Failed to delete completion record: %@";
+
+/* Onboarding */
+"onboarding.page1.title" = "Track only what you want";
+"onboarding.page2.title" = "Even if it's not\nwater liters and yoga";
+"onboarding.button.next" = "Wow, technology!";
+"onboarding.button.start" = "Start";
+
+/* Weekdays (full) */
+"weekday.monday.full" = "Monday";
+"weekday.tuesday.full" = "Tuesday";
+"weekday.wednesday.full" = "Wednesday";
+"weekday.thursday.full" = "Thursday";
+"weekday.friday.full" = "Friday";
+"weekday.saturday.full" = "Saturday";
+"weekday.sunday.full" = "Sunday";
+
+/* Weekdays (short) */
+"weekday.monday.short" = "Mon";
+"weekday.tuesday.short" = "Tue";
+"weekday.wednesday.short" = "Wed";
+"weekday.thursday.short" = "Thu";
+"weekday.friday.short" = "Fri";
+"weekday.saturday.short" = "Sat";
+"weekday.sunday.short" = "Sun";
+"statistics.empty" = "Nothing to analyze yet";
+"tracker.edit.title" = "Edit Habit";
+"common.save" = "Save";
+"trackers.empty.nothingFound" = "Nothing found";
+"filters.button" = "Filters";
+"filters.title" = "Filters";
+"filters.all" = "All trackers";
+"filters.today" = "Trackers for today";
+"filters.completed" = "Completed";
+"filters.uncompleted" = "Uncompleted";
+"statistics.bestPeriod" = "Best period";
+"statistics.perfectDays" = "Perfect days";
+"statistics.completed" = "Trackers completed";
+"statistics.average" = "Average";
+
